@@ -1,0 +1,22 @@
+{
+  "name": "scouttracker",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "db": "docker compose up -d",
+    "demo": "npm run demo -w @scouttracker/server",
+    "servidor": "npm run dev -w @scouttracker/server",
+    "app": "npm run start -w mobile",
+    "android": "npm run android -w mobile",
+    "test": "npm run test -w @scouttracker/shared && npm run test -w @scouttracker/server && npm run test -w mobile",
+    "typecheck": "npm run typecheck -w @scouttracker/shared && npm run typecheck -w @scouttracker/server && npm run typecheck -w mobile"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}
