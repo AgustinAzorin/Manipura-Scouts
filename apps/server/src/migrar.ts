@@ -23,5 +23,18 @@ export async function migrar(db: Db, dir = DIR_MIGRACIONES): Promise<string[]> {
     });
     nuevas.push(archivo);
   }
+  await activarRls(db);
   return nuevas;
+}
+
+/**
+ * Supabase publica el esquema public por su API REST con una llave pública. Con RLS activo y sin
+ * políticas, esa API no ve ninguna fila; el servidor no se ve afectado porque es el dueño de las
+ * tablas. Se aplica a todas las tablas, también a las que agreguen migraciones futuras.
+ */
+async function activarRls(db: Db): Promise<void> {
+  const tablas = await sql<{ tabla: string }>`
+    SELECT c.relname AS tabla FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT c.relrowsecurity AND pg_get_userbyid(c.relowner) = current_user`.execute(db);
+  for (const { tabla } of tablas.rows) await sql`ALTER TABLE ${sql.table(tabla)} ENABLE ROW LEVEL SECURITY`.execute(db);
 }

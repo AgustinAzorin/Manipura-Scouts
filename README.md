@@ -56,6 +56,14 @@ arrancado con `ORIGENES_CORS=http://localhost:8081`.
 
 Variables del servidor: ver `apps/server/.env.example`.
 
+## Producción
+
+Servidor en un Cloud Server de DonWeb con Docker (`Dockerfile`, `deploy/docker-compose.yml`: API +
+Caddy para HTTPS) y la base en Supabase, con SSL verificado (`DATABASE_SSL_CA`) y RLS activo en
+todas las tablas para que la API REST de Supabase no vea datos. Backups diarios cifrados de la base
+y los archivos (`deploy/backup.sh`, `deploy/restaurar.sh`). Equipos y catálogos de una rama:
+`deploy/ramas/*.json` con el comando `cargar-rama`. **Paso a paso en [docs/desplegar.md](docs/desplegar.md).**
+
 ## Pruebas
 
 ```bash
@@ -104,5 +112,5 @@ Criterios tomados donde el SRS no decide:
 ## Pendiente fuera de esta parte
 
 - Columna "Va", actividades, asistencia, autorizaciones de actividades y su sincronización (RF-057 a RF-071): Parte 2. La columna "Va" ya existe y muestra "—".
-- Alojamiento de producción (RES-01, RES-06), copias de seguridad y restauración (RNF-005 a RNF-010): dependen del proveedor, que el SRS deja sin definir. El almacenamiento de archivos actual es un directorio del servidor: el proveedor elegido tiene que ofrecer disco persistente, o hay que agregar un almacenamiento tipo S3.
+- Alojamiento de producción (RES-01, RES-06): elegido DonWeb + Supabase (ver [docs/desplegar.md](docs/desplegar.md)), todavía sin desplegar. Los backups diarios están armados (RNF-005 a RNF-010); falta medir en producción cuánto tarda una restauración completa.
 - Aviso de errores de la app móvil (RNF-034 del lado del celular): requiere elegir un servicio de reporte de cierres.

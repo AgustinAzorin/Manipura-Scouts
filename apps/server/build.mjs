@@ -1,9 +1,17 @@
-// Empaqueta el servidor (con el paquete compartido) en dist/main.js.
+// Empaqueta el servidor y los comandos de administración (con el paquete compartido) en dist/.
+// Todo queda en el mismo nivel para que las migraciones se encuentren en ../migrations.
+import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 await build({
-  entryPoints: ['src/main.ts'],
-  outfile: 'dist/main.js',
+  entryPoints: {
+    main: 'src/main.ts',
+    migrar: 'src/cli/migrar.ts',
+    'crear-admin': 'src/cli/crear-admin-plataforma.ts',
+    'cargar-rama': 'src/cli/cargar-rama.ts',
+    tareas: 'src/cli/tareas.ts',
+  },
+  outdir: 'dist',
   bundle: true,
   platform: 'node',
   target: 'node22',
@@ -14,7 +22,7 @@ await build({
     {
       name: 'incluir-shared',
       setup(b) {
-        b.onResolve({ filter: /^@scouttracker\/shared$/ }, async () => ({ path: new URL('../../packages/shared/src/index.ts', import.meta.url).pathname }));
+        b.onResolve({ filter: /^@scouttracker\/shared$/ }, async () => ({ path: fileURLToPath(new URL('../../packages/shared/src/index.ts', import.meta.url)) }));
       },
     },
   ],

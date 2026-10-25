@@ -1,0 +1,9 @@
+# Caddy saca y renueva solo el certificado HTTPS del dominio (Let's Encrypt).
+{$DOMINIO} {
+	encode zstd gzip
+	reverse_proxy servidor:3000
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}

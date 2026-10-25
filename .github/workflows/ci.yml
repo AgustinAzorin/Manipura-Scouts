@@ -31,3 +31,33 @@ jobs:
       - run: npx expo lint
         working-directory: apps/mobile
       - run: npm test
+
+  # La imagen de producción (deploy/docker-compose.yml) se arma, arranca y responde.
+  imagen:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: scout
+          POSTGRES_PASSWORD: scout
+          POSTGRES_DB: scouttracker
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U scout" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t scouttracker-servidor .
+      - name: Arranca, migra y responde /salud
+        run: |
+          docker run -d --name servidor --network host \
+            -e DATABASE_URL=postgres://scout:scout@localhost:5432/scouttracker \
+            -e SECRETO_ENLACES="$(openssl rand -hex 32)" -e URL_PUBLICA=https://ci.ejemplo \
+            -e DIR_ALMACENAMIENTO=/datos/archivos scouttracker-servidor
+          for i in $(seq 1 30); do curl -sf localhost:3000/salud && break; sleep 1; done
+          curl -sf localhost:3000/salud || { docker logs servidor; exit 1; }
+      - name: Comandos de administración dentro de la imagen
+        run: |
+          docker exec -e PASSWORD="$(openssl rand -hex 12)" servidor node dist/crear-admin.js "CI" ci@ejemplo.com
+          docker exec servidor node dist/migrar.js
+          docker inspect --format '{{.State.Health.Status}}' servidor

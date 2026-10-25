@@ -1,0 +1,23 @@
+{
+  "equipos": ["Baden Powell", "Frida Kahlo", "Lola Mora", "Tupac Amaru"],
+  "catalogos": {
+    "etapa": ["Ini", "Búsqueda", "Descubrimiento", "Desafío"],
+    "elemento": ["Agua", "Aire", "Fuego", "Tierra"],
+    "promesa": ["s/pañuelo", "c/pañuelo - s/promesa caminante", "c/promesa caminante"],
+    "raid": ["1°R", "2°R", "3°R"],
+    "guardian": ["Agua", "Aire", "Fuego", "Tierra", "Leyenda"],
+    "religion": ["Católica", "Cristiano Evan.", "No teísta", "Otros / En Búsqueda"],
+    "categoriaMiembro": [
+      "Protagonista",
+      "Educador",
+      "Educadora",
+      "Jefe de unidad",
+      "SJ de unidad",
+      "Colaborador",
+      "Colaboradora",
+      "Papá colaborador"
+    ],
+    "ingresoMovimiento": ["Manada", "Caminantes", "Mascota", "Educador"]
+  },
+  "adultos": ["Educador", "Educadora", "Jefe de unidad", "SJ de unidad", "Colaborador", "Colaboradora", "Papá colaborador"]
+}

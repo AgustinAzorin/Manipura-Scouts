@@ -1,0 +1,41 @@
+# Producción en un servidor propio: API + Caddy (HTTPS automático). La base está en Supabase.
+# Uso, desde esta carpeta: docker compose up -d --build   (ver docs/desplegar.md)
+name: scouttracker
+
+x-logs: &logs
+  # El disco es chico: los logs rotan y ocupan como máximo 50 MB por servicio.
+  driver: json-file
+  options: { max-size: 10m, max-file: '5' }
+
+services:
+  servidor:
+    build: ..
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DIR_ALMACENAMIENTO: /datos/archivos
+      # Vacío en .env (DATABASE_SSL_CA_CONTENEDOR=) para no verificar; ver la guía.
+      DATABASE_SSL_CA: ${DATABASE_SSL_CA_CONTENEDOR-/datos/supabase.crt}
+    volumes:
+      - ${DIR_DATOS:-/srv/scouttracker-datos}/archivos:/datos/archivos
+      - ${DIR_DATOS:-/srv/scouttracker-datos}/supabase.crt:/datos/supabase.crt:ro
+    logging: *logs
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [servidor]
+    ports: ['80:80', '443:443', '443:443/udp']
+    environment:
+      DOMINIO: ${DOMINIO:?Falta DOMINIO en deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data
+      - caddy_config:/config
+    logging: *logs
+
+volumes:
+  caddy_datos:
+  caddy_config:
