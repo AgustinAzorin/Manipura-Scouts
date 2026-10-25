@@ -12,6 +12,7 @@ import {
 import { sesionDe, type Dependencias } from '../app';
 import { conflicto, sinPermiso, validacion } from '../errores';
 import { calcularContextos, exigir, exigirAdminGrupo, type Sesion } from '../servicios/acceso';
+import { actividadesDeRama, asistenciaDelAnio, serializarActividades, tiposDeGrupo } from '../servicios/actividades';
 import { esquemaCuotas, esquemaDatosFicha, guardarFicha, traducirErrorUnico } from '../servicios/edicion';
 import {
   camposPropiosDeRama,
@@ -28,6 +29,9 @@ import { compararNombres, hoyAR } from '@scouttracker/shared';
 import type { Db, FilaFicha } from '../db';
 
 const pRama = z.object({ ramaId: z.string().uuid() });
+
+/** RF-054: actividades que se guardan para uso sin conexión: las que terminaron hace hasta 60 días y las futuras. */
+const DIAS_ACTIVIDADES_PASADAS = 60;
 const pFicha = z.object({ fichaId: z.string().uuid() });
 
 const esquemaPedido = z.object({
@@ -39,7 +43,7 @@ const esquemaPedido = z.object({
 });
 
 /** El usuario tiene alguna asignación que le da acceso a la rama (RF-021). */
-async function exigirAccesoRama(db: Db, s: Sesion, grupoId: string, ramaId: string) {
+export async function exigirAccesoRama(db: Db, s: Sesion, grupoId: string, ramaId: string) {
   const equipos = await db.selectFrom('equipos').select('id').where('rama_id', '=', ramaId).execute();
   const asigs = asignacionesEnRama(s.asignaciones, grupoId, ramaId, new Set(equipos.map((e) => e.id)));
   if (asigs.length === 0) throw sinPermiso('No tenés acceso a esta rama');
@@ -80,11 +84,16 @@ export async function rutasFichas(app: FastifyInstance, deps: Dependencias) {
       .sort((a, b) => compararNombres(a, b));
     const docs = await documentosDeFichas(deps.db, visibles.map((f) => f.id));
     const camposPropios = await camposPropiosDeRama(deps.db, rama.id);
+    const ahora = deps.ahora();
+    const actividades = await actividadesDeRama(deps.db, s, rama, { desde: new Date(ahora.getTime() - DIAS_ACTIVIDADES_PASADAS * 24 * 60 * 60 * 1000) });
     return {
-      generadoEn: deps.ahora().toISOString(),
+      generadoEn: ahora.toISOString(),
       contexto,
       rama: await configRama(deps.db, rama),
       fichas: visibles.map((f) => serializarFicha(s, f, docs.get(f.id), camposPropios)),
+      tiposActividad: await tiposDeGrupo(deps.db, rama.grupo_id),
+      actividades: await serializarActividades(deps.db, s, actividades, { ramaId: rama.id, soloVigentes: true }),
+      asistenciaAnio: await asistenciaDelAnio(deps.db, visibles.map((f) => f.id), ahora),
     };
   });
 

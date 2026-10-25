@@ -23,6 +23,7 @@ export default function Administracion() {
           <ItemMenu titulo="Usuarios" detalle="Invitar, roles asignados, desactivar" onPress={() => router.push(`/admin/grupo/${g.grupoId}/usuarios`)} />
           <ItemMenu titulo="Roles y permisos" onPress={() => router.push(`/admin/grupo/${g.grupoId}/roles`)} />
           <ItemMenu titulo="Ramas" onPress={() => router.push(`/admin/grupo/${g.grupoId}/ramas`)} />
+          <ItemMenu titulo="Tipos de actividad" detalle="Color y si piden autorización" onPress={() => router.push(`/admin/grupo/${g.grupoId}/tipos-actividad`)} />
         </View>
       ))}
       {ramas.length ? (

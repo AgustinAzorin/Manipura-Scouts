@@ -25,6 +25,12 @@ beforeAll(async () => {
   const logo = (await esc.admin.subir(`/equipos/${esc.equipos['Baden Powell']}/logo`, 'l.png', png)).json().logo;
   const campo = (await esc.admin.post(`/ramas/${esc.caminantes}/campos-propios`, { nombre: 'X', tipo: 'texto', seccion: 'organizacion', sensible: false })).json().id;
   const usuarios = (await esc.admin.get(`/grupos/${esc.grupoId}/usuarios`)).json();
+  const tipos = (await esc.admin.get(`/grupos/${esc.grupoId}/tipos-actividad`)).json();
+  const campamento = tipos.find((t: { nombre: string }) => t.nombre === 'Campamento').id;
+  const actividad = (
+    await esc.admin.post('/actividades', { grupoId: esc.grupoId, tipoId: campamento, nombre: 'Campamento', inicio: '2026-11-14T12:00:00Z', fin: '2026-11-16T19:00:00Z', alcance: 'rama', ramaId: esc.caminantes })
+  ).json().id;
+  await esc.admin.subir(`/actividades/${actividad}/inscripciones/${f.id}/autorizacion/archivo`, 'a.pdf', Buffer.from('%PDF-1.4\n%%EOF'), 'application/pdf');
   ids = {
     grupo: esc.grupoId,
     rama: esc.caminantes,
@@ -36,6 +42,8 @@ beforeAll(async () => {
     asignacion: usuarios[0].asignaciones[0].id,
     logo,
     campo,
+    tipo: campamento,
+    actividad,
   };
 });
 afterAll(async () => {
@@ -77,6 +85,17 @@ const rutas = (): [string, string, unknown?][] => [
   ['POST', `/grupos/${ids.grupo}/roles`, { nombre: 'R', permisos: {} }],
   ['PATCH', `/grupos/${ids.grupo}/roles/${ids.rol}`, { verSensibles: true }],
   ['DELETE', `/grupos/${ids.grupo}/roles/${ids.rol}`],
+  ['GET', `/grupos/${ids.grupo}/tipos-actividad`],
+  ['POST', `/grupos/${ids.grupo}/tipos-actividad`, { nombre: 'T', color: '#1F4D2B', requiereAutorizacion: false }],
+  ['PATCH', `/tipos-actividad/${ids.tipo}`, { nombre: 'T' }],
+  ['GET', `/ramas/${ids.rama}/actividades?anio=2026`],
+  ['POST', '/actividades', { grupoId: ids.grupo, tipoId: ids.tipo, nombre: 'X', inicio: '2026-11-14T12:00:00Z', fin: '2026-11-16T19:00:00Z', alcance: 'grupo' }],
+  ['GET', `/actividades/${ids.actividad}`],
+  ['PATCH', `/actividades/${ids.actividad}`, { nombre: 'Hackeada' }],
+  ['POST', `/actividades/${ids.actividad}/cancelar`],
+  ['PUT', `/actividades/${ids.actividad}/inscripciones`, { quitar: [ids.ficha] }],
+  ['GET', `/actividades/${ids.actividad}/inscripciones/${ids.ficha}/autorizacion/enlace`],
+  ['DELETE', `/actividades/${ids.actividad}/inscripciones/${ids.ficha}/autorizacion/archivo`],
 ];
 
 describe('RNF-011 aislamiento entre grupos', () => {
@@ -93,6 +112,16 @@ describe('RNF-011 aislamiento entre grupos', () => {
     const f = (await esc.admin.get(`/fichas/${ids.ficha}`)).json();
     expect(f).toMatchObject({ nombre: 'Ana', estado: 'activa', version: 1 });
     expect((await esc.admin.get(`/grupos/${esc.grupoId}/usuarios`)).json().every((u: { activo: boolean }) => u.activo)).toBe(true);
+  });
+
+  it('los registros de asistencia sobre una actividad de otro grupo se rechazan', async () => {
+    const r = await intruso.post('/sincronizar', {
+      registros: [{ id: 'r1', actividadId: ids.actividad, fichaId: ids.ficha, campo: 'presente', valor: true, anterior: false, en: '2026-10-24T15:00:00Z' }],
+    });
+    expect(r.json().resultados).toEqual([expect.objectContaining({ estado: 'rechazado' })]);
+    const a = (await esc.admin.get(`/actividades/${ids.actividad}`)).json();
+    expect(a).toMatchObject({ nombre: 'Campamento', canceladaEn: null });
+    expect(a.inscripciones).toEqual([expect.objectContaining({ fichaId: ids.ficha, presente: false })]);
   });
 
   it('la importación a una rama de otro grupo se rechaza', async () => {

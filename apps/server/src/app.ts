@@ -12,6 +12,7 @@ import type { Almacenamiento } from './servicios/almacenamiento';
 import { notificarError } from './servicios/monitoreo';
 import { Mailer } from './servicios/mailer';
 import { hashToken } from './servicios/seguridad';
+import { rutasActividades } from './rutas/actividades';
 import { rutasAdminGrupo } from './rutas/admin-grupo';
 import { rutasAdminRama } from './rutas/admin-rama';
 import { rutasArchivos } from './rutas/archivos';
@@ -113,6 +114,7 @@ export async function construirApp(deps: Dependencias): Promise<FastifyInstance>
   await app.register(async (r) => rutasDocumentos(r, deps));
   await app.register(async (r) => rutasImportacion(r, deps));
   await app.register(async (r) => rutasArchivos(r, deps));
+  await app.register(async (r) => rutasActividades(r, deps));
 
   return app;
 }

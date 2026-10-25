@@ -43,6 +43,14 @@ function Raiz() {
           <Stack.Screen name="ficha/[id]/editar" options={{ title: 'Editar ficha' }} />
           <Stack.Screen name="ficha/[id]/historial" options={{ title: 'Historial de cambios' }} />
           <Stack.Screen name="ficha/[id]/documento" options={{ title: 'Documento' }} />
+          <Stack.Screen name="actividades" options={{ title: 'Actividades' }} />
+          <Stack.Screen name="actividades-anteriores" options={{ title: 'Actividades anteriores' }} />
+          <Stack.Screen name="actividad/nueva" options={{ title: 'Nueva actividad' }} />
+          <Stack.Screen name="actividad/[id]/index" options={{ title: 'Actividad' }} />
+          <Stack.Screen name="actividad/[id]/editar" options={{ title: 'Editar actividad' }} />
+          <Stack.Screen name="actividad/[id]/inscriptos" options={{ title: 'Inscriptos' }} />
+          <Stack.Screen name="actividad/[id]/reporte" options={{ title: 'Reporte de asistencia' }} />
+          <Stack.Screen name="actividad/[id]/autorizacion" options={{ title: 'Autorización' }} />
           <Stack.Screen name="admin/index" options={{ title: 'Administración' }} />
           <Stack.Screen name="admin/plataforma" options={{ title: 'Grupos' }} />
           <Stack.Screen name="admin/grupo/[grupoId]/usuarios" options={{ title: 'Usuarios' }} />
@@ -50,6 +58,7 @@ function Raiz() {
           <Stack.Screen name="admin/grupo/[grupoId]/roles" options={{ title: 'Roles y permisos' }} />
           <Stack.Screen name="admin/grupo/[grupoId]/rol/[rolId]" options={{ title: 'Rol' }} />
           <Stack.Screen name="admin/grupo/[grupoId]/ramas" options={{ title: 'Ramas' }} />
+          <Stack.Screen name="admin/grupo/[grupoId]/tipos-actividad" options={{ title: 'Tipos de actividad' }} />
           <Stack.Screen name="admin/rama/[ramaId]/index" options={{ title: 'Rama' }} />
           <Stack.Screen name="admin/rama/[ramaId]/equipos" options={{ title: 'Equipos' }} />
           <Stack.Screen name="admin/rama/[ramaId]/catalogos" options={{ title: 'Catálogos' }} />

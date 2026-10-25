@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
-import { formatearFechaHora } from '@scouttracker/shared';
+import { formatearFechaHora, tienePermiso } from '@scouttracker/shared';
 import { useDatos } from '../lib/datos';
 import { useSesion } from '../lib/sesion';
 import { Aviso, Boton, confirmar, ItemMenu, Pantalla, Parrafo, Subtitulo } from '../ui/componentes';
 
 export default function Menu() {
   const { yo, contexto, cerrarSesion } = useSesion();
-  const { snapshot, sinConexion, recargar, cargando } = useDatos();
+  const { snapshot, sinConexion, recargar, cargando, pendientes } = useDatos();
   const router = useRouter();
   if (!yo) return null;
   const incompletas = snapshot?.fichas.filter((f) => f.estado === 'incompleta').length ?? 0;
@@ -27,6 +27,11 @@ export default function Menu() {
           {sinConexion ? 'Sin conexión. ' : ''}Datos al {formatearFechaHora(snapshot.generadoEn)}
         </Aviso>
       ) : null}
+      {pendientes.length ? (
+        <Aviso tipo="info">
+          {pendientes.length === 1 ? '1 registro de asistencia o autorización sin enviar' : `${pendientes.length} registros de asistencia o autorización sin enviar`}: se envían solos cuando haya conexión.
+        </Aviso>
+      ) : null}
       <Boton titulo="Sincronizar ahora" variante="secundario" onPress={recargar} cargando={cargando} />
       <View>
         <Subtitulo>Padrón</Subtitulo>
@@ -35,6 +40,12 @@ export default function Menu() {
         <ItemMenu titulo="Ex integrantes" detalle="Fichas archivadas (requiere conexión)" onPress={() => router.push('/ex-integrantes')} />
         {yo.contextos.length > 1 ? <ItemMenu titulo="Cambiar de rama o grupo" onPress={() => router.push('/contexto')} /> : null}
       </View>
+      {contexto && tienePermiso(contexto.permisos, 'actividades', 'ver') ? (
+        <View>
+          <Subtitulo>Actividades</Subtitulo>
+          <ItemMenu titulo="Actividades" detalle="Confirmaciones, asistencia y autorizaciones (funciona sin conexión)" onPress={() => router.push('/actividades')} />
+        </View>
+      ) : null}
       {administra ? (
         <View>
           <Subtitulo>Administración</Subtitulo>
@@ -45,7 +56,10 @@ export default function Menu() {
         titulo="Cerrar sesión"
         variante="peligro"
         onPress={async () => {
-          if (await confirmar('Cerrar sesión', 'Se borran del celular los datos guardados para usar sin conexión.', 'Cerrar sesión')) {
+          const sinEnviar = pendientes.length
+            ? ` Hay ${pendientes.length === 1 ? '1 registro' : `${pendientes.length} registros`} de asistencia o autorización sin enviar: se pierden.`
+            : '';
+          if (await confirmar('Cerrar sesión', `Se borran del celular los datos guardados para usar sin conexión.${sinEnviar}`, 'Cerrar sesión')) {
             await cerrarSesion();
             router.replace('/login');
           }

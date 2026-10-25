@@ -1,4 +1,5 @@
 /** Nómina: columnas, filtros, búsqueda y orden (RF-029 a RF-034). Se ejecuta en el dispositivo. */
+import { confirmacionesProximas, NOMBRE_CONFIRMACION, type ActividadDTO, type Confirmacion } from './actividades';
 import type { CatalogoValorDTO, EquipoDTO, FichaDTO, RamaConfigDTO } from './api';
 import { calcularEdad, diaCumpleanios, formatearEdad, formatearFecha, hoyAR, type FechaISO } from './fechas';
 import {
@@ -92,13 +93,16 @@ export interface IndiceRama {
   rama: RamaConfigDTO;
   valores: Map<string, CatalogoValorDTO>;
   equipos: Map<string, EquipoDTO>;
+  /** RF-067: confirmación de cada ficha para su próxima actividad. */
+  va: Map<string, Confirmacion>;
 }
 
-export function indexarRama(rama: RamaConfigDTO): IndiceRama {
+export function indexarRama(rama: RamaConfigDTO, actividades: ActividadDTO[] = [], ahora: Date = new Date()): IndiceRama {
   return {
     rama,
     valores: new Map(rama.catalogos.map((v) => [v.id, v])),
     equipos: new Map(rama.equipos.map((e) => [e.id, e])),
+    va: confirmacionesProximas(actividades, ahora),
   };
 }
 
@@ -151,9 +155,11 @@ export function valorColumna(f: FichaDTO, columna: string, ix: IndiceRama, hoy: 
       const t = estadoTadaDe(f, hoy);
       return t ? { texto: NOMBRE_ESTADO_TADA[t], orden: t === 'tiene' ? 2 : t === 'puedeHacer' ? 1 : 0 } : VACIO;
     }
-    // La confirmación para la próxima actividad llega con la Parte 2 (RF-067).
-    case 'va':
-      return { texto: '—', orden: '' };
+    // RF-067: sin próxima actividad en la que esté inscripto, "—".
+    case 'va': {
+      const c = ix.va.get(f.id);
+      return c ? { texto: NOMBRE_CONFIRMACION[c], orden: c === 'va' ? 0 : c === 'sinRespuesta' ? 1 : 2 } : { texto: '—', orden: 3 };
+    }
     case 'dni':
       return f.dni ? { texto: f.dni, orden: f.dni.padStart(10, '0') } : VACIO;
     case 'fechaNacimiento':

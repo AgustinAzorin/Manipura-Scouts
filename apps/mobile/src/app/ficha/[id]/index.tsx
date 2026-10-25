@@ -18,6 +18,7 @@ import {
   hoyAR,
   NOMBRE_ESTADO_TADA,
   nombreCompleto,
+  porcentajeAsistencia,
   tienePermiso,
   valorColumna,
   type CampoFicha,
@@ -175,6 +176,16 @@ export default function DetalleFicha() {
         ) : null}
         <Boton titulo="Historial" variante="secundario" onPress={() => router.push(`/ficha/${ficha.id}/historial`)} deshabilitado={offline} estilo={{ flex: 1 }} />
       </View>
+
+      {/* RF-069: asistencia del año calendario. */}
+      {tienePermiso(p, 'actividades', 'ver') && snapshot.asistenciaAnio[ficha.id]?.total ? (
+        <Tarjeta>
+          <Dato
+            etiqueta={`Asistencia ${hoy.slice(0, 4)}`}
+            valor={`${porcentajeAsistencia(snapshot.asistenciaAnio[ficha.id])}% (presente en ${snapshot.asistenciaAnio[ficha.id]!.presentes} de ${snapshot.asistenciaAnio[ficha.id]!.total} actividades)`}
+          />
+        </Tarjeta>
+      ) : null}
 
       {SECCIONES.filter((s) => s !== 'administrativa' && s !== 'documentos').map(seccion)}
 

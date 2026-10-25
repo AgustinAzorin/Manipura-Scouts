@@ -7,7 +7,8 @@ export const DIAS_EQUIPO_DESACTIVADO = 90;
 
 /**
  * RF-008 / RN-20: elimina los equipos desactivados hace 90 días. Sus integrantes quedan
- * "Sin equipo" (y pierden la función de cordi); el cambio queda en el historial.
+ * "Sin equipo" (y pierden la función de cordi); el cambio queda en el historial. Sus actividades
+ * pasan a la rama para no perder la asistencia (RN-12).
  */
 export async function eliminarEquiposVencidos(deps: Dependencias): Promise<number> {
   const limite = new Date(deps.ahora().getTime() - DIAS_EQUIPO_DESACTIVADO * 24 * 60 * 60 * 1000);
@@ -41,6 +42,7 @@ export async function eliminarEquiposVencidos(deps: Dependencias): Promise<numbe
           )
           .execute();
       }
+      await trx.updateTable('actividades').set({ alcance: 'rama', equipo_id: null }).where('equipo_id', '=', e.id).execute();
       await trx.deleteFrom('equipos').where('id', '=', e.id).execute();
     });
     if (e.logo_archivo_id) {
