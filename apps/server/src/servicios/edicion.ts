@@ -19,7 +19,7 @@ import {
   type Cuotas,
   type DatosFicha,
 } from '@scouttracker/shared';
-import type { Transaction } from 'kysely';
+import type { Kysely, Transaction } from 'kysely';
 import { z } from 'zod';
 import { json, type BaseDeDatos, type FilaFicha } from '../db';
 import { conflicto, ErrorHttp, sinPermiso, validacion } from '../errores';
@@ -207,6 +207,22 @@ export interface PedidoGuardado {
   cuotas?: Cuotas;
   camposPropios?: Record<string, unknown>;
   reemplazarCordi?: boolean;
+  /** El usuario revisó los valores marcados al importar: se descartan esos motivos (RF-050). */
+  revisada?: boolean;
+}
+
+/**
+ * Motivos de "Ficha incompleta" que siguen vigentes después de un guardado. Los de valores no
+ * reconocidos al importar se descartan solo si se cargó ese campo o si el usuario marcó la ficha
+ * como revisada; los de obligatorios se recalculan siempre (RF-050).
+ */
+export function motivosVigentes(motivos: string[], faltan: string[], etiquetasCambiadas: string[], revisada: boolean): string[] {
+  const resueltos = (m: string) =>
+    revisada ||
+    etiquetasCambiadas.some(
+      (e) => m.includes(`en ${e}:`) || m.endsWith(`en ${e}`) || (e === 'Tiene TADA' && m.includes('TADA')) || ((e === 'Cordi' || e === 'Equipo') && m.includes('cordi')),
+    );
+  return [...faltan.map((f) => `Falta ${f}`), ...motivos.filter((m) => !m.startsWith('Falta ') && !resueltos(m))];
 }
 
 /**
@@ -234,7 +250,7 @@ export async function guardarFicha(
   const objetivoAnterior = actual ? { grupoId: rama.grupo_id, ramaId: rama.id, equipoId: actual.equipo_id } : null;
   const objetivoNuevo = { grupoId: rama.grupo_id, ramaId: rama.id, equipoId: nuevos.equipoId ?? null };
 
-  const cambiaFicha = Object.keys(cambiosDatos).length > 0 || Object.keys(pedido.camposPropios ?? {}).length > 0;
+  const cambiaFicha = Object.keys(cambiosDatos).length > 0 || Object.keys(pedido.camposPropios ?? {}).length > 0 || pedido.revisada === true;
   if (actual) {
     if (cambiaFicha && !puede(s.asignaciones, 'padron', 'editar', objetivoAnterior!)) throw sinPermiso('No tenés permiso para editar esta ficha');
     if (!igual(nuevos.equipoId, anteriores.equipoId) && !puede(s.asignaciones, 'padron', 'editar', objetivoNuevo)) {
@@ -270,12 +286,12 @@ export async function guardarFicha(
     throw validacion(`Faltan datos obligatorios: ${faltan.join(', ')}`, Object.fromEntries(faltan.map((f) => [f, 'Obligatorio'])));
   }
   if (estado === 'incompleta') {
-    if (faltan.length === 0) {
-      estado = 'activa';
-      motivos = [];
-    } else {
-      motivos = [...faltan.map((f) => `Falta ${f}`), ...motivos.filter((m) => !m.startsWith('Falta '))];
-    }
+    const etiquetas = [
+      ...Object.keys(cambiosDatos).map((c) => DEF_CAMPO[c as CampoFicha]?.etiqueta ?? c),
+      ...Object.keys(pedido.cuotas ?? {}).map((c) => `cuota ${c}`),
+    ];
+    motivos = motivosVigentes(motivos, faltan, etiquetas, pedido.revisada === true);
+    if (motivos.length === 0) estado = 'activa';
   }
 
   if (nuevos.dni && !igual(nuevos.dni, anteriores.dni)) await verificarDniLibre(trx, rama.grupo_id, nuevos.dni, actual?.id);
@@ -319,7 +335,8 @@ export async function guardarFicha(
 
   let fila: FilaFicha;
   if (actual) {
-    if (cambios.length === 0) return actual;
+    const mismosMotivos = motivos.length === actual.incompleta_motivos.length && motivos.every((m, i) => m === actual.incompleta_motivos[i]);
+    if (cambios.length === 0 && mismosMotivos) return actual;
     fila = await trx
       .updateTable('fichas')
       .set({
@@ -350,6 +367,7 @@ export async function guardarFicha(
       .executeTakeFirstOrThrow();
     cambios.unshift({ campo: opciones.campoEvento ?? '_alta', anterior: null, nuevo: null });
   }
+  if (cambios.length === 0) return fila;
   await trx
     .insertInto('historial')
     .values(
@@ -379,3 +397,20 @@ export function traducirErrorUnico(e: unknown): never {
   throw e;
 }
 
+
+/**
+ * Al registrar un documento de una ficha incompleta se descarta el motivo de ese documento y,
+ * si no queda ninguno, la ficha pasa a activa (RF-050).
+ */
+export async function reevaluarIncompleta(db: Kysely<BaseDeDatos>, fichaId: string, etiqueta: string): Promise<void> {
+  const f = await db.selectFrom('fichas').selectAll().where('id', '=', fichaId).executeTakeFirstOrThrow();
+  if (f.estado !== 'incompleta') return;
+  const datos = Object.fromEntries(CAMPOS_FICHA.map((c) => [c, f[COLUMNA[c]] ?? null])) as DatosFicha;
+  const motivos = motivosVigentes(f.incompleta_motivos, obligatoriosFaltantes(datos), [etiqueta], false);
+  if (motivos.length === f.incompleta_motivos.length) return;
+  await db
+    .updateTable('fichas')
+    .set({ incompleta_motivos: motivos, estado: motivos.length ? 'incompleta' : 'activa', actualizado_en: new Date() })
+    .where('id', '=', fichaId)
+    .execute();
+}

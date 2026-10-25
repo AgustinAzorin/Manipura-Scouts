@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "npm run test -w @scouttracker/shared && npm run test -w @scouttracker/server",
+    "test": "npm run test -w @scouttracker/shared && npm run test -w @scouttracker/server && npm run test -w mobile",
     "typecheck": "npm run typecheck -w @scouttracker/shared && npm run typecheck -w @scouttracker/server && npm run typecheck -w mobile"
   },
   "devDependencies": {

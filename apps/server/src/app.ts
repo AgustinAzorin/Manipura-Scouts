@@ -72,7 +72,7 @@ export async function construirApp(deps: Dependencias): Promise<FastifyInstance>
   });
 
   if (deps.config.origenesCors.length > 0) {
-    await app.register(cors, { origin: deps.config.origenesCors });
+    await app.register(cors, { origin: deps.config.origenesCors, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] });
   }
   await app.register(formbody);
   await app.register(multipart, { limits: { fileSize: TAMANO_MAXIMO_ARCHIVO, files: 1 } });

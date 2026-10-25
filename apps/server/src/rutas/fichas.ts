@@ -35,6 +35,7 @@ const esquemaPedido = z.object({
   cuotas: esquemaCuotas.optional(),
   camposPropios: z.record(z.string(), z.unknown()).optional(),
   reemplazarCordi: z.boolean().optional(),
+  revisada: z.boolean().optional(),
 });
 
 /** El usuario tiene alguna asignación que le da acceso a la rama (RF-021). */

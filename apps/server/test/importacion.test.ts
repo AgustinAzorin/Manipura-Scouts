@@ -126,6 +126,24 @@ describe('RF-049 a RF-053 importar planilla', () => {
     expect(r.json()).toMatchObject({ estado: 'activa', incompletaMotivos: [] });
   });
 
+  it('un valor no reconocido sigue pendiente hasta cargar ese campo o marcar la ficha como revisada', async () => {
+    await esc.admin.subir(`/ramas/${esc.caminantes}/importar`, 'p.csv', csv([fila(1, { Mayo: 'X', Etapa: 'Rara' }), fila(2, { Mayo: 'X' })]));
+    const [a, b] = (await esc.admin.get(`/ramas/${esc.caminantes}/snapshot`)).json().fichas;
+    // Editar otro campo no la completa.
+    let r = (await esc.admin.patch(`/fichas/${a.id}`, { version: a.version, datos: { telEmergencia1: '1199998888' } })).json();
+    expect(r.estado).toBe('incompleta');
+    expect(r.incompletaMotivos).toEqual(['Valor no reconocido en Etapa: "Rara"', 'Valor no reconocido en cuota mayo: "X"']);
+    // Cargar la cuota resuelve ese motivo; queda el de la etapa.
+    r = (await esc.admin.patch(`/fichas/${a.id}`, { version: r.version, cuotas: { mayo: 'pagada' } })).json();
+    expect(r.incompletaMotivos).toEqual(['Valor no reconocido en Etapa: "Rara"']);
+    r = (await esc.admin.patch(`/fichas/${a.id}`, { version: r.version, datos: { etapaId: esc.catalogo['Ini'] } })).json();
+    expect(r).toMatchObject({ estado: 'activa', incompletaMotivos: [] });
+    // Marcarla como revisada descarta los motivos sin cambiar datos.
+    const rb = (await esc.admin.patch(`/fichas/${b.id}`, { version: b.version, revisada: true })).json();
+    expect(rb).toMatchObject({ estado: 'activa', incompletaMotivos: [] });
+    expect(rb.cuotas.mayo).toBeNull();
+  });
+
   it('cordi marcado "C", TADA antes de los 16 y DNI con formato inválido', async () => {
     const r = (
       await esc.admin.subir(

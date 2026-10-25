@@ -5,6 +5,7 @@ import { sesionDe, type Dependencias } from '../app';
 import { noEncontrado, sinPermiso, validacion } from '../errores';
 import { exigir, verSensibles, type Sesion } from '../servicios/acceso';
 import { auditar } from '../servicios/auditoria';
+import { reevaluarIncompleta } from '../servicios/edicion';
 import { cargarFicha, objetivoFicha, valorDocumentoLegible } from '../servicios/fichas';
 import { leerArchivoSubido } from '../servicios/subidas';
 import { enlaceArchivo } from './archivos';
@@ -49,6 +50,7 @@ export async function rutasDocumentos(app: FastifyInstance, deps: Dependencias) 
     const anterior = valorDocumentoLegible(previo?.estado ?? 'noPresentado', previo?.fecha_entrega ?? null);
     const nuevo = valorDocumentoLegible(d.estado, fecha);
     if (anterior !== nuevo) await registrar(s, f, `doc.${tipo}`, anterior, nuevo);
+    await reevaluarIncompleta(deps.db, f.id, DEF_DOCUMENTO[tipo].nombre);
     return { ok: true };
   });
 
