@@ -58,12 +58,13 @@ export async function pedir<T>(metodo: Metodo, ruta: string, cuerpo?: unknown): 
   const control = new AbortController();
   const temporizador = setTimeout(() => control.abort(), TIEMPO_MAXIMO_MS);
   const esFormulario = typeof FormData !== 'undefined' && cuerpo instanceof FormData;
+  const tokenEnviado = token;
   let r: Response;
   try {
     r = await fetch(`${urlServidor}${ruta}`, {
       method: metodo,
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(tokenEnviado ? { Authorization: `Bearer ${tokenEnviado}` } : {}),
         ...(cuerpo !== undefined && !esFormulario ? { 'Content-Type': 'application/json' } : {}),
       },
       body: cuerpo === undefined ? undefined : esFormulario ? (cuerpo as FormData) : JSON.stringify(cuerpo),
@@ -79,7 +80,9 @@ export async function pedir<T>(metodo: Metodo, ruta: string, cuerpo?: unknown): 
   if (!r.ok) {
     const error = new ErrorDelServidor(r.status, datos ?? { codigo: 'ERROR', mensaje: `Error ${r.status}` });
     // RNF-020 / RNF-021: sesión inválida (vencida, cerrada o usuario desactivado) → se borra todo.
-    if (r.status === 401 && token && alPerderSesion) alPerderSesion();
+    // Solo si el 401 corresponde a la sesión actual: un pedido que salió sin token (antes de leer
+    // la sesión guardada) o con el de una sesión anterior no debe cerrar la que está abierta.
+    if (r.status === 401 && tokenEnviado && tokenEnviado === token && alPerderSesion) alPerderSesion();
     throw error;
   }
   return datos as T;
