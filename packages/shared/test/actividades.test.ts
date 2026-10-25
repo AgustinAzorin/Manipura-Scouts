@@ -39,6 +39,8 @@ const actividad = (extra: Partial<ActividadDTO> = {}): ActividadDTO => ({
   ramaId: 'r1',
   equipoId: null,
   canceladaEn: null,
+  avisos: [],
+  destinoAvisos: { tipo: 'alcance' },
   inscripciones: [],
   ...extra,
 });

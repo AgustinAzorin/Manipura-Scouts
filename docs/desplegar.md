@@ -121,7 +121,23 @@ unset PASSWORD
 ## 7. La app
 
 En tu compu, en `apps/mobile/eas.json`, cambiá `https://api.ejemplo.com.ar` por `https://api.TUDOMINIO.com.ar`
-(perfil `production`) y commitealo. Después, en `apps/mobile`:
+(perfil `production`) y commitealo.
+
+**Avisos push (RF-080).** Salen por el servicio gratuito de Expo, que necesita un proyecto de EAS y,
+para Android, Firebase. Se hace una sola vez:
+
+1. En `apps/mobile`: `npx eas-cli@latest init`. Copiá el id del proyecto que muestra y agregalo en
+   `eas.json` a los perfiles `preview` y `production`, dentro de `env`: `"EAS_PROJECT_ID": "el-id"`.
+2. Android: en [console.firebase.google.com](https://console.firebase.google.com) creá un proyecto, agregá
+   una app Android con el paquete `ar.scouttracker.app` (y `ar.scouttracker.app.prueba` para la de prueba)
+   y bajá `google-services.json`. Subilo a EAS como variable de tipo archivo, sin commitearlo:
+   `npx eas-cli@latest env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret`.
+3. Android: en Firebase → Configuración del proyecto → Cuentas de servicio, generá una clave privada
+   (JSON) y cargala con `npx eas-cli@latest credentials` → Android → *Google Service Account* → *FCM V1*.
+4. iOS: `eas build` configura solo las credenciales de push de Apple, con la cuenta del Apple Developer Program.
+
+Sin estos pasos la app funciona igual, pero no recibe notificaciones; los avisos siguen saliendo por
+mail. Después, en `apps/mobile`:
 
 ```bash
 # APK para instalar directamente (sin Play Store)
@@ -205,4 +221,5 @@ Las migraciones de la base se aplican solas al arrancar.
 | `/salud` no abre o sin candado | El DNS (`nslookup`), el firewall (`ufw status`) y `docker compose logs caddy`. Caddy necesita los puertos 80 y 443 libres. |
 | Errores de conexión a la base | Proyecto pausado en Supabase, contraseña mal escrita en `DATABASE_URL`, o el certificado (paso 5). |
 | Disco lleno | `df -h`, `du -sh /srv/scouttracker-datos/archivos /var/backups/scouttracker`, `docker system df`. |
+| No llegan notificaciones | En la app: Menú → Avisos → "Activar o revisar notificaciones". Si dice que no está disponible, la build no tiene `EAS_PROJECT_ID`; si llegan a iOS y no a Android, faltan las credenciales FCM V1 (paso 7). Los errores de envío llegan por mail al responsable técnico. |
 | No llegan mails | Sin `RESEND_API_KEY` los enlaces quedan en `docker compose logs servidor`. Para enviarlos, creá una cuenta en Resend, verificá el dominio y completá `RESEND_API_KEY` y `MAIL_REMITENTE`. |

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { Kysely, PostgresDialect, type ColumnType, type Generated, type Selectable } from 'kysely';
 import pg from 'pg';
+import type { Antelacion, Destino } from '@scouttracker/shared';
 
 // Las columnas `date` se leen como texto "AAAA-MM-DD" para no mezclar zonas horarias.
 pg.types.setTypeParser(1082, (v: string) => v);
@@ -242,6 +243,7 @@ export interface TablaActividades {
   equipo_id: string | null;
   cancelada_en: Instante | null;
   creado_por: string | null;
+  destino_avisos: ColumnType<Destino, string | undefined, string>;
   creado_en: Creado;
   actualizado_en: Creado;
 }
@@ -259,6 +261,70 @@ export interface TablaInscripciones {
   autorizacion_en: Instante | null;
   autorizacion_archivo_id: string | null;
   creado_en: Creado;
+}
+
+export interface TablaAvisosActividad {
+  id: Generated<string>;
+  grupo_id: string;
+  actividad_id: string;
+  antelacion: Antelacion;
+  enviar_en: Instante;
+  enviado_en: Instante | null;
+  omitido: Generated<boolean>;
+  anulado_en: Instante | null;
+}
+
+export interface TablaFeriados {
+  id: Generated<string>;
+  grupo_id: string | null;
+  fecha: string;
+  nombre: string;
+  actualizado_en: Creado;
+}
+
+export interface TablaRecordatorios {
+  id: Generated<string>;
+  usuario_id: string;
+  grupo_id: string;
+  fecha: string;
+  hora: string | null;
+  titulo: string;
+  creado_en: Creado;
+}
+
+export interface TablaDispositivos {
+  token: string;
+  usuario_id: string;
+  sesion_id: string;
+  plataforma: 'android' | 'ios';
+  actualizado_en: Creado;
+}
+
+export interface TablaPreferenciasAvisos {
+  usuario_id: string;
+  tipo: string;
+  canal: string;
+  activo: boolean;
+}
+
+export interface TablaAvisosManuales {
+  id: Generated<string>;
+  grupo_id: string;
+  remitente_id: string | null;
+  remitente_nombre: string;
+  destino: ColumnType<Destino, string, string>;
+  destino_nombre: string;
+  canales: ColumnType<string[], string[], string[]>;
+  importante: Generated<boolean>;
+  titulo: string;
+  texto: string;
+  destinatarios: number;
+  creado_en: Creado;
+}
+
+export interface TablaCumpleaniosAvisados {
+  ficha_id: string;
+  fecha: string;
 }
 
 export interface BaseDeDatos {
@@ -283,6 +349,13 @@ export interface BaseDeDatos {
   tipos_actividad: TablaTiposActividad;
   actividades: TablaActividades;
   inscripciones: TablaInscripciones;
+  avisos_actividad: TablaAvisosActividad;
+  feriados: TablaFeriados;
+  recordatorios: TablaRecordatorios;
+  dispositivos: TablaDispositivos;
+  preferencias_avisos: TablaPreferenciasAvisos;
+  avisos_manuales: TablaAvisosManuales;
+  cumpleanios_avisados: TablaCumpleaniosAvisados;
 }
 
 export type Db = Kysely<BaseDeDatos>;

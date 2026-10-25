@@ -13,6 +13,7 @@ import { sesionDe, type Dependencias } from '../app';
 import { conflicto, sinPermiso, validacion } from '../errores';
 import { calcularContextos, exigir, exigirAdminGrupo, type Sesion } from '../servicios/acceso';
 import { actividadesDeRama, asistenciaDelAnio, serializarActividades, tiposDeGrupo } from '../servicios/actividades';
+import { feriadosDeGrupo, recordatoriosDeUsuario } from './calendario';
 import { esquemaCuotas, esquemaDatosFicha, guardarFicha, traducirErrorUnico } from '../servicios/edicion';
 import {
   camposPropiosDeRama,
@@ -25,7 +26,7 @@ import {
   serializarFicha,
 } from '../servicios/fichas';
 import { suprimirFicha } from '../servicios/privacidad';
-import { compararNombres, hoyAR } from '@scouttracker/shared';
+import { compararNombres, hoyAR, sumarDias } from '@scouttracker/shared';
 import type { Db, FilaFicha } from '../db';
 
 const pRama = z.object({ ramaId: z.string().uuid() });
@@ -86,6 +87,8 @@ export async function rutasFichas(app: FastifyInstance, deps: Dependencias) {
     const camposPropios = await camposPropiosDeRama(deps.db, rama.id);
     const ahora = deps.ahora();
     const actividades = await actividadesDeRama(deps.db, s, rama, { desde: new Date(ahora.getTime() - DIAS_ACTIVIDADES_PASADAS * 24 * 60 * 60 * 1000) });
+    const desde = sumarDias(hoyAR(ahora), -DIAS_ACTIVIDADES_PASADAS);
+    const hasta = `${Number(hoyAR(ahora).slice(0, 4)) + 1}-12-31`;
     return {
       generadoEn: ahora.toISOString(),
       contexto,
@@ -94,6 +97,9 @@ export async function rutasFichas(app: FastifyInstance, deps: Dependencias) {
       tiposActividad: await tiposDeGrupo(deps.db, rama.grupo_id),
       actividades: await serializarActividades(deps.db, s, actividades, { ramaId: rama.id, soloVigentes: true }),
       asistenciaAnio: await asistenciaDelAnio(deps.db, visibles.map((f) => f.id), ahora),
+      feriados: await feriadosDeGrupo(deps.db, rama.grupo_id, desde, hasta),
+      recordatorios: await recordatoriosDeUsuario(deps.db, s.usuarioId, rama.grupo_id, desde, hasta),
+      roles: await deps.db.selectFrom('roles').select(['id', 'nombre']).where('grupo_id', '=', rama.grupo_id).orderBy('nombre').execute(),
     };
   });
 

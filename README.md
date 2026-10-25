@@ -2,8 +2,9 @@
 
 App móvil (Android e iOS) para el padrón, las actividades y la documentación de ramas scout.
 Este repositorio implementa la **Parte 1 — Base** del SRS v1.4 (grupos, ramas, equipos, usuarios,
-roles, padrón, importación y consulta sin conexión) y, de la **Parte 2**, las actividades, la
-asistencia y las autorizaciones con registro sin conexión (RF-057 a RF-071, salvo RF-068).
+roles, padrón, importación y consulta sin conexión) y la **Parte 2 — Actividades** (RF-057 a
+RF-087, salvo RF-068): actividades, asistencia y autorizaciones con registro sin conexión,
+calendario y avisos por push y mail.
 
 ## Estructura
 
@@ -109,7 +110,15 @@ anterior en cada push (RNF-033).
 | RF-069, RF-070 | `servicios/actividades.ts` (`asistenciaDelAnio`), app `actividad/[id]/reporte.tsx`, `actividades-anteriores.tsx` | `actividades.test.ts` |
 | RF-071 | app `actividad/[id]/index.tsx`, `shared/actividades.ts` (`totalesActividad`) | `actividades.test.ts`, recorrido en navegador |
 | RN-19 | `shared/actividades.ts` (`asignacionVeActividad`) | `actividades.test.ts` |
-| RD-001, RNF-011 | todas las rutas nuevas | `aislamiento.test.ts` |
+| RF-072 a RF-074, RF-077 | `shared/calendario.ts` (`eventosPorDia`, `semanasDelMes`, `cumpleaniosEnAnio`), `rutas/calendario.ts`, app `calendario.tsx` | `calendario.test.ts` (shared y server), recorrido en navegador |
+| RF-075, RF-076, RI-010, DEP-02 | `servicios/feriados.ts` (ArgentinaDatos), `rutas/calendario.ts`, app `admin/grupo/[grupoId]/feriados.tsx` | `calendario.test.ts` |
+| RF-078, RF-079, RN-16 | `shared/calendario.ts` (`momentoAviso`), `servicios/avisos.ts` (`programarAvisos`, `destinatariosDeActividad`), app `ui/formulario-actividad.tsx` | `calendario.test.ts` |
+| RF-080, RF-081, RI-011 | `servicios/push.ts` (Expo), app `lib/notificaciones.ts` | `calendario.test.ts` |
+| RF-082, RN-14 | `servicios/avisos.ts` (`enviarAviso`), `servicios/mailer.ts` | `calendario.test.ts` |
+| RF-083, RN-15 | `servicios/avisos.ts` (`procesarAvisos`, cada minuto desde `main.ts`) | `calendario.test.ts` |
+| RF-084 | `shared/calendario.ts` (`recibeAviso`), `rutas/calendario.ts`, app `avisos.tsx` | `calendario.test.ts` |
+| RF-085 | `servicios/avisos.ts` (`avisarCambio`, `avisarCancelacion`), `rutas/actividades.ts` | `calendario.test.ts` |
+| RF-086, RF-087 | `rutas/calendario.ts`, app `admin/grupo/[grupoId]/avisos.tsx` | `calendario.test.ts` |
 
 Criterios tomados donde el SRS no decide:
 
@@ -126,6 +135,17 @@ Criterios tomados donde el SRS no decide:
 - **Alcance:** no se edita; para otro alcance se cancela la actividad y se crea otra. Al eliminarse un
   equipo (RN-20), sus actividades pasan a la rama para conservar la asistencia.
 - **Confirmación (RF-065):** requiere conexión, porque RF-055 solo exceptúa asistencia y autorizaciones.
+- **Destinatarios (RF-079, RF-086):** "rama" son los usuarios asignados a esa rama o a sus equipos (no los
+  de alcance de grupo); "equipo", los asignados a ese equipo; "rol", los de ese rol (dentro del alcance si es
+  de una actividad). Los de una actividad tienen que poder verla (RN-19).
+- **Cumpleaños (RF-083):** llega a los educadores con asignación en la rama o en el equipo del protagonista,
+  por push y por mail según sus preferencias. El 29/02 se avisa el 28/02 en años no bisiestos.
+- **Avisos atrasados:** uno que debía salir hace más de 30 minutos (servidor caído) no se manda y queda
+  marcado como omitido; uno cuyo momento ya había pasado al crear la actividad tampoco.
+- **Cambios (RF-085):** se avisa si cambian la fecha, la hora o el lugar de una actividad con avisos
+  programados; si la fecha se movió, los avisos ya enviados vuelven a programarse.
+- **Push:** el celular queda registrado con la sesión; al cerrarla o al desactivar al usuario deja de recibir.
+  Los textos de los avisos no llevan datos sensibles, pero el de cumpleaños lleva el nombre del protagonista.
 
 ## Importación de la planilla
 
@@ -142,7 +162,7 @@ Criterios tomados donde el SRS no decide:
 
 ## Pendiente fuera de esta parte
 
-- Resto de la Parte 2: calendario y avisos por push y mail (RF-072 a RF-087). Al editar o cancelar una actividad todavía no se reprograman ni se anulan avisos (RF-061, RF-062 y RF-085 lo piden cuando existan).
+- Push en producción: crear el proyecto de EAS y las credenciales de Firebase ([docs/desplegar.md](docs/desplegar.md), paso 7).
 - Asociar la Ficha de Actividad (RF-068): depende del generador de PDF de la Parte 3.
 - Alojamiento de producción (RES-01, RES-06): elegido DonWeb + Supabase (ver [docs/desplegar.md](docs/desplegar.md)), todavía sin desplegar. Los backups diarios están armados (RNF-005 a RNF-010); falta medir en producción cuánto tarda una restauración completa.
 - Aviso de errores de la app móvil (RNF-034 del lado del celular): requiere elegir un servicio de reporte de cierres.

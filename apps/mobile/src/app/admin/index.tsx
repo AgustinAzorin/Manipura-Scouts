@@ -24,6 +24,8 @@ export default function Administracion() {
           <ItemMenu titulo="Roles y permisos" onPress={() => router.push(`/admin/grupo/${g.grupoId}/roles`)} />
           <ItemMenu titulo="Ramas" onPress={() => router.push(`/admin/grupo/${g.grupoId}/ramas`)} />
           <ItemMenu titulo="Tipos de actividad" detalle="Color y si piden autorización" onPress={() => router.push(`/admin/grupo/${g.grupoId}/tipos-actividad`)} />
+          <ItemMenu titulo="Feriados" detalle="Nacionales y propios del grupo" onPress={() => router.push(`/admin/grupo/${g.grupoId}/feriados`)} />
+          <ItemMenu titulo="Avisos al grupo" detalle="Enviar un aviso y ver los enviados" onPress={() => router.push(`/admin/grupo/${g.grupoId}/avisos`)} />
         </View>
       ))}
       {ramas.length ? (

@@ -45,6 +45,12 @@
       ],
       "expo-secure-store",
       [
+        "expo-notifications",
+        {
+          "color": "#1F4D2B"
+        }
+      ],
+      [
         "expo-local-authentication",
         {
           "faceIDPermission": "ScoutTracker usa Face ID para proteger los datos de los protagonistas."
