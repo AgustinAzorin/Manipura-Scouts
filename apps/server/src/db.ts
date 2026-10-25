@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { Kysely, PostgresDialect, type ColumnType, type Generated, type Selectable } from 'kysely';
 import pg from 'pg';
 
@@ -242,9 +243,20 @@ export type Db = Kysely<BaseDeDatos>;
 export type FilaFicha = Selectable<TablaFichas>;
 export type FilaRol = Selectable<TablaRoles>;
 
+/**
+ * SSL hacia la base (por ejemplo Supabase). Con DATABASE_SSL_CA (ruta al certificado raíz del
+ * proveedor) se cifra y se verifica el servidor; DATABASE_SSL=sin-verificar cifra sin verificar,
+ * solo como último recurso. La URL no debe traer `sslmode`, que tendría prioridad sobre esto.
+ */
+export function opcionesSsl(entorno: NodeJS.ProcessEnv = process.env): pg.PoolConfig['ssl'] {
+  if (entorno.DATABASE_SSL_CA) return { ca: readFileSync(entorno.DATABASE_SSL_CA, 'utf8') };
+  if (entorno.DATABASE_SSL === 'sin-verificar') return { rejectUnauthorized: false };
+  return undefined;
+}
+
 export function crearDb(connectionString: string): Db {
   return new Kysely<BaseDeDatos>({
-    dialect: new PostgresDialect({ pool: new pg.Pool({ connectionString, max: 10 }) }),
+    dialect: new PostgresDialect({ pool: new pg.Pool({ connectionString, max: 10, ssl: opcionesSsl() }) }),
   });
 }
 

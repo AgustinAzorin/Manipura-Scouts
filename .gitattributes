@@ -1,0 +1,4 @@
+# Los scripts y la configuración del servidor se ejecutan en Linux: siempre con fin de línea LF.
+*.sh text eol=lf
+deploy/Caddyfile text eol=lf
+Dockerfile text eol=lf

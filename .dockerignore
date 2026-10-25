@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+.git
+.github
+.claude
+docs
+deploy
+apps/mobile/*
+!apps/mobile/package.json
+**/.env
+**/.env.*
+**/almacenamiento

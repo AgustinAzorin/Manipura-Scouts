@@ -9,6 +9,7 @@
     "build": "node build.mjs",
     "migrate": "tsx src/cli/migrar.ts",
     "crear-admin": "tsx src/cli/crear-admin-plataforma.ts",
+    "cargar-rama": "tsx src/cli/cargar-rama.ts",
     "tareas": "tsx src/cli/tareas.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

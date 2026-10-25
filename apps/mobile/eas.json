@@ -27,6 +27,13 @@
         "EXPO_PUBLIC_API_URL": "https://api.ejemplo.com.ar",
         "EXPO_PUBLIC_ENTORNO": "produccion"
       }
+    },
+    "production-apk": {
+      "extends": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {
