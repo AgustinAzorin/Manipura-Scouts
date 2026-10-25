@@ -4,14 +4,15 @@ App móvil (Android e iOS) para el padrón, las actividades y la documentación 
 Este repositorio implementa la **Parte 1 — Base** del SRS v1.4 (grupos, ramas, equipos, usuarios,
 roles, padrón, importación y consulta sin conexión), la **Parte 2 — Actividades** (RF-057 a
 RF-087): actividades, asistencia y autorizaciones con registro sin conexión, calendario y avisos
-por push y mail, y la **Parte 3 — PDF** (RF-068, RF-088 a RF-105): el generador de la Ficha de
-Actividad con anexos que carga cada educador.
+por push y mail, la **Parte 3 — PDF** (RF-068, RF-088 a RF-105): el generador de la Ficha de
+Actividad con anexos que carga cada educador, y la **Parte 4 — Gráficos e inicio** (RF-106 a
+RF-116): gráficos, pantalla de inicio con pendientes y exportación de la nómina a Excel.
 
 ## Estructura
 
 | Carpeta | Contenido |
 |---|---|
-| `packages/shared` | Reglas de negocio compartidas: edad (RN-01), TADA (RN-02), DNI y teléfonos (RN-03, RD-009), fechas (RN-04), cuotas (RN-05), documentos (RN-06), permisos por rol y alcance (RF-017 a RF-020), definición de la ficha (RD-002), lógica de la nómina (RF-029 a RF-034), reglas de la Ficha de Actividad (RN-09, RN-10) y tipos de la API. |
+| `packages/shared` | Reglas de negocio compartidas: edad (RN-01), TADA (RN-02), DNI y teléfonos (RN-03, RD-009), fechas (RN-04), cuotas (RN-05), documentos (RN-06), permisos por rol y alcance (RF-017 a RF-020), definición de la ficha (RD-002), lógica de la nómina (RF-029 a RF-034), reglas de la Ficha de Actividad (RN-09, RN-10), gráficos y pendientes del inicio (RF-106 a RF-114) y tipos de la API. |
 | `apps/server` | API HTTP (Fastify + PostgreSQL con Kysely). Migraciones SQL en `migrations/`. |
 | `apps/mobile` | App Expo SDK 58 (React Native, Expo Router). |
 
@@ -27,6 +28,11 @@ Actividad con anexos que carga cada educador.
   navegador ni dependencias nativas), en A4, con la fuente Roboto que trae el paquete. El PDF no
   descarga nada ni lee otros archivos del servidor. La app lo descarga con un enlace firmado y lo
   entrega al menú de compartir del celular (`expo-sharing`).
+- **Gráficos e inicio:** se calculan en el celular con los datos guardados, así funcionan sin conexión
+  y no exponen nada que el usuario no tenga ya en su nómina. Las barras son vistas comunes de React
+  Native (sin librería de gráficos ni módulos nativos nuevos), con nombre y valor escritos en cada una.
+- **Excel:** el servidor arma el XLSX con exceljs (la misma librería de la importación) usando las mismas
+  reglas de la nómina que la app (`shared/nomina.ts`), y la app lo entrega al menú de compartir.
 - **Mails:** Resend por HTTP (SUP-06) con el tope diario de RN-14. Los enlaces de invitación y recuperación abren una página web del servidor, que funciona en cualquier celular aunque el cliente de mail no abra la app.
 
 ## Desarrollo local
@@ -197,6 +203,49 @@ Criterios tomados donde el SRS no decide:
   asignada a quien la hace; si viene de otra rama, la categoría se busca por nombre en la rama actual y la
   cantidad de equipos vuelve a la de la rama.
 
+## Trazabilidad de la Parte 4 (gráficos, inicio y exportación)
+
+| Requisitos | Dónde | Pruebas |
+|---|---|---|
+| RF-106 a RF-110, RI-003 | `shared/graficos.ts` (`armarGraficos`), app `graficos.tsx`, `ui/graficos.tsx` | `graficos.test.ts`, `contraste.test.ts`, recorrido en navegador |
+| RF-111, RF-112 | `shared/nomina.ts` (`armarNomina`, `describirFiltros`), app `graficos.tsx`, `nomina.tsx` | `graficos.test.ts`, recorrido en navegador |
+| RF-113, RF-114 | `shared/inicio.ts` (`cumpleaniosDelMes`, `proximasActividades`, `documentosPendientes`, `cuotasPendientes`, `autorizacionesPendientes`), app `inicio.tsx`, `pendientes.tsx` | `inicio.test.ts`, recorrido en navegador |
+| RF-115, RF-116, RI-007, RNF-043 | `rutas/exportacion.ts`, `servicios/exportacion.ts` (`nominaXlsx`), app `lib/exportacion.ts` | `exportacion.test.ts` (servidor) |
+
+Criterios tomados donde el SRS no decide:
+
+- **Protagonistas activos:** los gráficos y el total del inicio cuentan las fichas activas e incompletas;
+  las archivadas no llegan al celular.
+- **Edades (RF-106):** por años cumplidos. Si entre la edad mínima y la máxima falta alguna, aparece en 0
+  para que no se saltee; las fichas sin fecha de nacimiento van en "Sin dato".
+- **Valores de catálogo y equipos (RF-107, RF-109):** en el orden del catálogo, los activos aunque estén en 0
+  y los desactivados solo si alguien todavía los tiene. Con alcance de equipo, o con un equipo elegido, el
+  gráfico de equipos no muestra los demás en 0.
+- **Colores (RF-108):** TADA usa tres colores validados para daltonismo y con contraste ≥ 3:1; los demás
+  gráficos, el color principal de la app. Cada barra lleva su nombre, su valor y su porcentaje escritos.
+- **Religión (RF-110):** con el permiso de datos sensibles, y contando solo las fichas cuyos datos
+  sensibles llegaron al celular (con alcance mixto puede no ser toda la rama).
+- **Filtro por rama (RF-111):** el selector cambia de rama dentro del grupo, como el selector de contexto;
+  las ramas son las que el usuario puede ver. Un campo oculto en la rama (RF-048) saca su gráfico.
+- **Desde la nómina (RF-112) y exportación (RF-115):** van los filtros, la vista por equipo y el orden de
+  la lista. La búsqueda por texto no: no es un filtro, puede tener el nombre o el DNI de un protagonista y
+  los filtros de la exportación quedan en la auditoría (RNF-043, RNF-046). Si hay una búsqueda escrita, la
+  app avisa antes de exportar cuántas fichas salen.
+- **Inicio (RF-113):** pasa a ser la primera pantalla al entrar a una rama; la nómina se abre desde ahí o
+  desde el menú. Muestra hasta 3 próximas actividades y los equipos activos con su logo.
+- **Pendientes (RF-114):** "documentos no presentados" cuenta autorizaciones, DDJJ y consentimiento en
+  "No presentado" (el PDF adjunto general es opcional y no se reclama; una autorización presentada que no
+  autoriza no es un pendiente). "Cuotas adeudadas" son las marcadas "Adeudada"; pagadas, exentas o sin
+  dato no cuentan. Las autorizaciones faltantes son las de la próxima actividad que pide autorización
+  (no la próxima a secas, que suele ser una reunión), contando a los que van, como en RF-071. Cada
+  contador aparece solo si el usuario puede ver ese módulo; los anexos se actualizan con conexión.
+- **Columnas del Excel (RF-115, RF-116):** todas las que el usuario puede ver en la rama, no solo las
+  visibles en su tabla: las fijas, los campos propios activos, las cuotas y los documentos (con fecha de
+  entrega). Sin datos sensibles no se arman DNI, teléfonos, religión ni los documentos sensibles; solo
+  queda el PDF adjunto general. La edad va como número. Una segunda hoja indica rama, vista, filtros,
+  cantidad, quién exportó y cuándo. Con alcance de equipo se exportan solo las fichas de su equipo.
+- **Permiso de Exportación:** la acción "Ver" del módulo Exportación (RF-017).
+
 ## Importación de la planilla
 
 Los encabezados se reconocen con una lista de nombres (`apps/server/src/importacion/mapeo.ts`) que
@@ -216,5 +265,6 @@ Criterios tomados donde el SRS no decide:
 - Compartir el PDF (RF-104) usa `expo-sharing`, un módulo nativo nuevo: hay que compilar otro APK o
   *development build* para probarlo en el celular.
 - Medir RNF-004 (PDF de 10 páginas en 20 s) en el Moto G22 de referencia.
+- Probar en el celular el menú de compartir del Excel (RF-115): usa los mismos módulos que el PDF.
 - Alojamiento de producción (RES-01, RES-06): elegido DonWeb + Supabase (ver [docs/desplegar.md](docs/desplegar.md)), todavía sin desplegar. Los backups diarios están armados (RNF-005 a RNF-010); falta medir en producción cuánto tarda una restauración completa.
 - Aviso de errores de la app móvil (RNF-034 del lado del celular): requiere elegir un servicio de reporte de cierres.

@@ -24,7 +24,7 @@ export default function ElegirContexto() {
                 detalle={[c.comunidad, c.soloEquipos ? 'Solo tu equipo' : null].filter(Boolean).join(' · ') || undefined}
                 onPress={async () => {
                   await elegirRama(c.ramaId);
-                  router.replace('/nomina');
+                  router.replace('/inicio');
                 }}
               />
             ))}

@@ -36,7 +36,10 @@ function Raiz() {
           <Stack.Screen name="login" options={{ title: 'Iniciar sesión', headerBackVisible: false }} />
           <Stack.Screen name="recuperar" options={{ title: 'Recuperar contraseña' }} />
           <Stack.Screen name="contexto" options={{ title: 'Elegí dónde trabajar' }} />
-          <Stack.Screen name="nomina" options={{ title: 'Nómina', headerBackVisible: false }} />
+          <Stack.Screen name="inicio" options={{ title: 'Inicio', headerBackVisible: false }} />
+          <Stack.Screen name="nomina" options={{ title: 'Nómina' }} />
+          <Stack.Screen name="graficos" options={{ title: 'Gráficos' }} />
+          <Stack.Screen name="pendientes" options={{ title: 'Pendientes' }} />
           <Stack.Screen name="menu" options={{ title: 'Menú' }} />
           <Stack.Screen name="incompletas" options={{ title: 'Fichas a completar' }} />
           <Stack.Screen name="ex-integrantes" options={{ title: 'Ex integrantes' }} />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COLORES_TIPO_ACTIVIDAD } from '@scouttracker/shared';
+import { COLOR_TADA, COLORES_TIPO_ACTIVIDAD } from '@scouttracker/shared';
 import { colores } from '../src/ui/tema';
 
 /** RNF-029: contraste WCAG 2.1 AA. */
@@ -36,6 +36,11 @@ describe('RNF-029 contraste', () => {
   });
   it('texto blanco sobre los colores de tipo de actividad ≥ 4,5:1 (RF-063)', () => {
     for (const { color } of COLORES_TIPO_ACTIVIDAD) expect(contraste(colores.primarioTexto, color)).toBeGreaterThanOrEqual(4.5);
+  });
+  it('barras de los gráficos ≥ 3:1 (RF-106 a RF-110)', () => {
+    for (const color of [colores.primario, ...Object.values(COLOR_TADA)]) {
+      for (const f of fondos) expect(contraste(color, f)).toBeGreaterThanOrEqual(3);
+    }
   });
   it('bordes de los controles ≥ 3:1', () => {
     for (const f of fondos) expect(contraste(colores.borde, f)).toBeGreaterThanOrEqual(3);

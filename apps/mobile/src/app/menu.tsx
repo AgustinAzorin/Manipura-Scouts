@@ -37,7 +37,11 @@ export default function Menu() {
       <Boton titulo="Sincronizar ahora" variante="secundario" onPress={recargar} cargando={cargando} />
       <View>
         <Subtitulo>Padrón</Subtitulo>
+        <ItemMenu titulo="Inicio" detalle="Resumen de la rama y pendientes" onPress={() => router.dismissTo('/inicio')} />
         <ItemMenu titulo="Nómina" onPress={() => router.dismissTo('/nomina')} />
+        {contexto && tienePermiso(contexto.permisos, 'graficos', 'ver') ? (
+          <ItemMenu titulo="Gráficos" detalle="Edades, promesas, TADA, equipos y más (funciona sin conexión)" onPress={() => router.push('/graficos')} />
+        ) : null}
         <ItemMenu titulo="Fichas a completar" detalle={incompletas ? `${incompletas} incompletas` : 'Ninguna'} onPress={() => router.push('/incompletas')} />
         <ItemMenu titulo="Ex integrantes" detalle="Fichas archivadas (requiere conexión)" onPress={() => router.push('/ex-integrantes')} />
         {yo.contextos.length > 1 ? <ItemMenu titulo="Cambiar de rama o grupo" onPress={() => router.push('/contexto')} /> : null}

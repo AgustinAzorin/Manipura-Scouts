@@ -8,7 +8,7 @@ export default function Inicio() {
   const router = useRouter();
   if (estado.tipo === 'cargando') return <Cargando />;
   if (estado.tipo === 'sinSesion' || !yo) return <Redirect href="/login" />;
-  if (contexto) return <Redirect href="/nomina" />;
+  if (contexto) return <Redirect href="/inicio" />;
   if (yo.contextos.length > 1) return <Redirect href="/contexto" />;
   const administra = yo.usuario.esAdminPlataforma || yo.gruposAdministrables.length > 0;
   return (
