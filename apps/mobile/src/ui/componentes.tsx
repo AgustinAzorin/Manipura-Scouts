@@ -97,6 +97,7 @@ export function Campo({
   error,
   ayuda,
   obligatorio,
+  style,
   ...props
 }: TextInputProps & { etiqueta: string; error?: string | null; ayuda?: string; obligatorio?: boolean }) {
   return (
@@ -108,7 +109,7 @@ export function Campo({
       <TextInput
         accessibilityLabel={etiqueta}
         placeholderTextColor={colores.textoSuave}
-        style={[e.input, !!error && { borderColor: colores.peligro }, props.editable === false && { backgroundColor: colores.fondo }]}
+        style={[e.input, props.multiline && e.multilinea, !!error && { borderColor: colores.peligro }, props.editable === false && { backgroundColor: colores.fondo }, style]}
         {...props}
       />
       {ayuda && !error ? <Text style={e.ayuda}>{ayuda}</Text> : null}
@@ -137,6 +138,7 @@ export function Selector({
   error,
   permitirVacio = true,
   textoVacio = 'Sin asignar',
+  textoNinguno = 'Todos',
   deshabilitado,
 }: {
   etiqueta: string;
@@ -147,6 +149,8 @@ export function Selector({
   error?: string | null;
   permitirVacio?: boolean;
   textoVacio?: string;
+  /** Con `multiple`, lo que muestra si no hay nada elegido. */
+  textoNinguno?: string;
   deshabilitado?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -157,7 +161,7 @@ export function Selector({
         .map((o) => o.etiqueta)
         .join(', ')
     : multiple
-      ? 'Todos'
+      ? textoNinguno
       : textoVacio;
   const elegir = (v: string) => {
     if (!multiple) {
@@ -348,6 +352,7 @@ const e = StyleSheet.create({
   campo: { gap: espacio.xs },
   etiqueta: { fontSize: texto.normal, fontWeight: '600', color: colores.texto },
   input: { minHeight: TACTIL_MINIMO, borderWidth: 2, borderColor: colores.borde, borderRadius: 8, paddingHorizontal: espacio.m, paddingVertical: espacio.s, fontSize: texto.normal, color: colores.texto, backgroundColor: colores.superficie },
+  multilinea: { minHeight: 96, textAlignVertical: 'top' },
   selector: { flexDirection: 'row', alignItems: 'center', gap: espacio.s },
   ayuda: { fontSize: texto.chico, color: colores.textoSuave },
   error: { fontSize: texto.chico, color: colores.peligro, fontWeight: '600' },

@@ -53,6 +53,13 @@ function Raiz() {
           <Stack.Screen name="actividad/[id]/inscriptos" options={{ title: 'Inscriptos' }} />
           <Stack.Screen name="actividad/[id]/reporte" options={{ title: 'Reporte de asistencia' }} />
           <Stack.Screen name="actividad/[id]/autorizacion" options={{ title: 'Autorización' }} />
+          <Stack.Screen name="actividad/[id]/ficha" options={{ title: 'Ficha de Actividad' }} />
+          <Stack.Screen name="ficha-actividad/[id]/index" options={{ title: 'Ficha de Actividad' }} />
+          <Stack.Screen name="ficha-actividad/[id]/textos" options={{ title: 'Diagnóstico y objetivos' }} />
+          <Stack.Screen name="ficha-actividad/[id]/grilla" options={{ title: 'Programación de actividades' }} />
+          <Stack.Screen name="ficha-actividad/[id]/anexo/[anexoId]" options={{ title: 'Anexo' }} />
+          <Stack.Screen name="ficha-actividad/[id]/reutilizar" options={{ title: 'Copiar un anexo' }} />
+          <Stack.Screen name="anexos-pendientes" options={{ title: 'Mis anexos pendientes' }} />
           <Stack.Screen name="calendario" options={{ title: 'Calendario' }} />
           <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
           <Stack.Screen name="admin/index" options={{ title: 'Administración' }} />
@@ -70,6 +77,7 @@ function Raiz() {
           <Stack.Screen name="admin/rama/[ramaId]/catalogos" options={{ title: 'Catálogos' }} />
           <Stack.Screen name="admin/rama/[ramaId]/campos" options={{ title: 'Campos de la ficha' }} />
           <Stack.Screen name="admin/rama/[ramaId]/importar" options={{ title: 'Importar planilla' }} />
+          <Stack.Screen name="admin/rama/[ramaId]/cabecera" options={{ title: 'Cabecera de la Ficha de Actividad' }} />
         </Stack>
       </DatosProvider>
     </BloqueoProvider>

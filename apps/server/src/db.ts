@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { Kysely, PostgresDialect, type ColumnType, type Generated, type Selectable } from 'kysely';
 import pg from 'pg';
-import type { Antelacion, Destino } from '@scouttracker/shared';
+import type { Antelacion, AreaFicha, Destino, EducadorCabecera, EstadoFichaActividad, FilaGrilla, MaterialAnexo } from '@scouttracker/shared';
 
 // Las columnas `date` se leen como texto "AAAA-MM-DD" para no mezclar zonas horarias.
 pg.types.setTypeParser(1082, (v: string) => v);
@@ -327,6 +327,63 @@ export interface TablaCumpleaniosAvisados {
   fecha: string;
 }
 
+export interface TablaCabecerasFicha {
+  rama_id: string;
+  grupo_id: string;
+  nombre_grupo: string | null;
+  nombre_comunidad: string | null;
+  logo_archivo_id: string | null;
+  educadores: ColumnType<EducadorCabecera[], string | undefined, string>;
+  actualizado_en: Creado;
+}
+
+export interface TablaFichasActividad {
+  id: Generated<string>;
+  grupo_id: string;
+  rama_id: string;
+  actividad_id: string;
+  estado: Generated<EstadoFichaActividad>;
+  diagnostico: Generated<string>;
+  por_que: Generated<string>;
+  a_que_responde: Generated<string>;
+  donde_necesidad: Generated<string>;
+  por_que_lugar: Generated<string>;
+  objetivos_educativos: ColumnType<string[], string[] | undefined, string[]>;
+  objetivos_dirigente: ColumnType<string[], string[] | undefined, string[]>;
+  areas: ColumnType<AreaFicha[], string | undefined, string>;
+  grilla: ColumnType<FilaGrilla[], string | undefined, string>;
+  pdf_archivo_id: string | null;
+  pdf_final: Generated<boolean>;
+  pdf_generado_en: Instante | null;
+  creado_por: string | null;
+  creado_en: Creado;
+  actualizado_en: Creado;
+}
+
+export interface TablaAnexos {
+  id: Generated<string>;
+  grupo_id: string;
+  ficha_actividad_id: string;
+  numero: number;
+  asignado_a: string | null;
+  titulo: Generated<string>;
+  categoria_id: string | null;
+  edad_desde: number | null;
+  edad_hasta: number | null;
+  participantes: number | null;
+  duracion_minutos: number | null;
+  espacio: Generated<string>;
+  educadores: Generated<string>;
+  equipos: number | null;
+  motivacion: Generated<string>;
+  objetivos: Generated<string>;
+  areas: Generated<string>;
+  materiales: ColumnType<MaterialAnexo[], string | undefined, string>;
+  desarrollo: Generated<string>;
+  completo: Generated<boolean>;
+  actualizado_en: Creado;
+}
+
 export interface BaseDeDatos {
   grupos: TablaGrupos;
   ramas: TablaRamas;
@@ -356,11 +413,16 @@ export interface BaseDeDatos {
   preferencias_avisos: TablaPreferenciasAvisos;
   avisos_manuales: TablaAvisosManuales;
   cumpleanios_avisados: TablaCumpleaniosAvisados;
+  cabeceras_ficha: TablaCabecerasFicha;
+  fichas_actividad: TablaFichasActividad;
+  anexos: TablaAnexos;
 }
 
 export type Db = Kysely<BaseDeDatos>;
 export type FilaFicha = Selectable<TablaFichas>;
 export type FilaActividad = Selectable<TablaActividades>;
+export type FilaFichaActividad = Selectable<TablaFichasActividad>;
+export type FilaAnexo = Selectable<TablaAnexos>;
 export type FilaRol = Selectable<TablaRoles>;
 
 /**

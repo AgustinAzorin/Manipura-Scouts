@@ -27,6 +27,9 @@ export default function ConfigRama() {
       <ItemMenu titulo="Catálogos" detalle="Elemento, Promesa, Etapa, Raid, Guardián y otros" onPress={() => router.push(`/admin/rama/${ramaId}/catalogos`)} />
       <ItemMenu titulo="Campos de la ficha" detalle="Ocultar campos y crear campos propios" onPress={() => router.push(`/admin/rama/${ramaId}/campos`)} />
       <ItemMenu titulo="Importar planilla" detalle="CSV o XLSX con las columnas de la planilla actual" onPress={() => router.push(`/admin/rama/${ramaId}/importar`)} />
+      {adminGrupo ? (
+        <ItemMenu titulo="Cabecera de la Ficha de Actividad" detalle="Portada, logo y equipo de educadores" onPress={() => router.push(`/admin/rama/${ramaId}/cabecera`)} />
+      ) : null}
       <Boton titulo="Actualizar la nómina en este celular" variante="texto" onPress={recargarNomina} />
     </Pantalla>
   );

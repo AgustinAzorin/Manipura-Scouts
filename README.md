@@ -2,15 +2,16 @@
 
 App móvil (Android e iOS) para el padrón, las actividades y la documentación de ramas scout.
 Este repositorio implementa la **Parte 1 — Base** del SRS v1.4 (grupos, ramas, equipos, usuarios,
-roles, padrón, importación y consulta sin conexión) y la **Parte 2 — Actividades** (RF-057 a
-RF-087, salvo RF-068): actividades, asistencia y autorizaciones con registro sin conexión,
-calendario y avisos por push y mail.
+roles, padrón, importación y consulta sin conexión), la **Parte 2 — Actividades** (RF-057 a
+RF-087): actividades, asistencia y autorizaciones con registro sin conexión, calendario y avisos
+por push y mail, y la **Parte 3 — PDF** (RF-068, RF-088 a RF-105): el generador de la Ficha de
+Actividad con anexos que carga cada educador.
 
 ## Estructura
 
 | Carpeta | Contenido |
 |---|---|
-| `packages/shared` | Reglas de negocio compartidas: edad (RN-01), TADA (RN-02), DNI y teléfonos (RN-03, RD-009), fechas (RN-04), cuotas (RN-05), documentos (RN-06), permisos por rol y alcance (RF-017 a RF-020), definición de la ficha (RD-002), lógica de la nómina (RF-029 a RF-034) y tipos de la API. |
+| `packages/shared` | Reglas de negocio compartidas: edad (RN-01), TADA (RN-02), DNI y teléfonos (RN-03, RD-009), fechas (RN-04), cuotas (RN-05), documentos (RN-06), permisos por rol y alcance (RF-017 a RF-020), definición de la ficha (RD-002), lógica de la nómina (RF-029 a RF-034), reglas de la Ficha de Actividad (RN-09, RN-10) y tipos de la API. |
 | `apps/server` | API HTTP (Fastify + PostgreSQL con Kysely). Migraciones SQL en `migrations/`. |
 | `apps/mobile` | App Expo SDK 58 (React Native, Expo Router). |
 
@@ -22,6 +23,10 @@ calendario y avisos por push y mail.
 - **Sin conexión:** la app descarga la nómina de la rama (sin campos sensibles si el usuario no tiene ese permiso, RNF-018) y la guarda cifrada con AES-256-GCM; la clave vive en el llavero del sistema (SecureStore). Sin conexión todo es de solo lectura (RF-055). Los datos se borran al cerrar sesión, si pasan 7 días sin sincronizar o si el usuario pierde el acceso (RF-013, RNF-019, RNF-020).
 - **Bloqueo:** se pide huella, rostro o PIN del celular al abrir la app y tras 5 minutos sin uso (RNF-016).
 - **Archivos:** almacenamiento privado; se abren solo con enlaces firmados de 10 minutos (RNF-022). El tipo se valida por los bytes del archivo, no por el nombre.
+- **PDF:** la Ficha de Actividad se genera en el servidor con pdfmake (JavaScript puro, sin
+  navegador ni dependencias nativas), en A4, con la fuente Roboto que trae el paquete. El PDF no
+  descarga nada ni lee otros archivos del servidor. La app lo descarga con un enlace firmado y lo
+  entrega al menú de compartir del celular (`expo-sharing`).
 - **Mails:** Resend por HTTP (SUP-06) con el tope diario de RN-14. Los enlaces de invitación y recuperación abren una página web del servidor, que funciona en cualquier celular aunque el cliente de mail no abra la app.
 
 ## Desarrollo local
@@ -147,6 +152,51 @@ Criterios tomados donde el SRS no decide:
 - **Push:** el celular queda registrado con la sesión; al cerrarla o al desactivar al usuario deja de recibir.
   Los textos de los avisos no llevan datos sensibles, pero el de cumpleaños lleva el nombre del protagonista.
 
+## Trazabilidad de la Parte 3 (Ficha de Actividad)
+
+| Requisitos | Dónde | Pruebas |
+|---|---|---|
+| RF-068 | `rutas/fichas-actividad.ts`, app `actividad/[id]/ficha.tsx` | `fichas-actividad.test.ts` |
+| RF-088, RI-002 | `rutas/fichas-actividad.ts` (cabecera), `servicios/fichas-actividad.ts` (`cabeceraDeRama`), app `admin/rama/[ramaId]/cabecera.tsx` | `fichas-actividad.test.ts` |
+| RF-089 a RF-092 | `rutas/fichas-actividad.ts`, `shared/fichaActividad.ts` (`ordenarAreas`, `faltantesVersionFinal`), app `ficha-actividad/[id]/textos.tsx` | `fichaActividad.test.ts` (shared y server) |
+| RF-093, RF-094, RF-098 | `shared/fichaActividad.ts` (`ordenarGrilla`, `textoResponsable`, `materialesDeFila`), app `ficha-actividad/[id]/grilla.tsx` | `fichaActividad.test.ts` (shared y server) |
+| RF-095 a RF-097, RD-005 | `rutas/fichas-actividad.ts` (anexos, `/yo/anexos-pendientes`), `shared/fichaActividad.ts` (`faltantesAnexo`), app `ficha-actividad/[id]/anexo/[anexoId].tsx`, `ui/desarrollo.tsx`, `anexos-pendientes.tsx` | `fichaActividad.test.ts` (shared y server) |
+| RF-099, RN-10 | `shared/fichaActividad.ts` (`listaDeCompras`) | `fichaActividad.test.ts` (shared y server) |
+| RF-100 a RF-102, RN-09, RES-04, RI-008 | `servicios/pdf-ficha.ts`, `shared/fichaActividad.ts` (`faltantesVersionFinal`) | `fichas-actividad.test.ts` |
+| RF-103, RF-104, RI-009 | `rutas/fichas-actividad.ts` (`/pdf`, `/pdf/enlace`), app `lib/fichaActividad.ts` (`compartirPdf`) | `fichas-actividad.test.ts`, prueba en el celular |
+| RF-105 | `rutas/fichas-actividad.ts` (`anexos-reutilizables`, `anexos/copiar`), app `ficha-actividad/[id]/reutilizar.tsx` | `fichas-actividad.test.ts` |
+| RNF-004 | `servicios/pdf-ficha.ts` | `fichas-actividad.test.ts` (en el servidor; falta medir en el Moto G22) |
+
+Criterios tomados donde el SRS no decide:
+
+- **Dónde se genera el PDF:** en el servidor. En el celular de referencia no hay que cargar fuentes ni
+  armar el PDF, y el archivo queda guardado en la actividad (RF-103) para compartirlo desde cualquier
+  celular. Por eso la Ficha de Actividad requiere conexión, como todo lo que no exceptúa RF-055.
+- **Fecha, lugar y cabecera:** la ficha no los copia: se leen de la actividad y de la cabecera de la rama
+  al mostrarla y al generar el PDF. Si cambian, el próximo PDF sale con los datos nuevos. El equipo de
+  educadores de la cabecera va como lista después del diagnóstico.
+- **Actividades de grupo:** no tienen rama; la ficha es de la rama desde la que se crea (su cabecera, su
+  diagnóstico y sus usuarios). Una actividad tiene una sola ficha (sección 3.3).
+- **Permisos:** sobre la rama de la ficha y, si la actividad es de un equipo, sobre ese equipo. Ver alcanza
+  para abrir y compartir el PDF; generar el PDF, armar la grilla y crear, asignar o borrar anexos requiere
+  editar. El asignado de un anexo lo ve y lo completa aunque su rol no tenga permiso de editar (RF-095).
+- **"Usuarios de la rama" (RF-094, RF-095):** los asignados a la rama, a uno de sus equipos o al grupo.
+- **Estados (sección 3.3):** cualquier cambio en la ficha o en sus anexos la vuelve a "en carga"; generar la
+  versión final la pasa a "final". La app avisa si el PDF guardado es anterior a los últimos cambios.
+- **Anexos fuera de la grilla:** RN-09 solo exige completos los que usa la grilla. La versión final lleva
+  solo los anexos completos; el borrador, todos, con los faltantes como "Pendiente — asignado a…".
+- **Anexo completo:** si después se borra un obligatorio (título, categoría o desarrollo), deja de estarlo.
+  Un anexo que usa la grilla no se puede borrar.
+- **Materiales (RN-10):** "descripción idéntica" se compara sin mayúsculas, tildes ni espacios de más. La
+  cantidad puede faltar (por ejemplo "espacio de lanzamiento"): el ítem va a la lista sin número.
+- **Responsable (RF-094):** los usuarios van con su nombre de pila, como en el ejemplo; si dos usuarios de la
+  rama comparten nombre de pila, va el nombre completo.
+- **Desarrollo (RD-005):** negrita con `**texto**` y listas con líneas que empiezan con "- ". La app tiene
+  botones para marcarlas y una vista previa.
+- **Reutilizar (RF-105):** se ofrecen los anexos con título de fichas que el usuario puede ver. La copia queda
+  asignada a quien la hace; si viene de otra rama, la categoría se busca por nombre en la rama actual y la
+  cantidad de equipos vuelve a la de la rama.
+
 ## Importación de la planilla
 
 Los encabezados se reconocen con una lista de nombres (`apps/server/src/importacion/mapeo.ts`) que
@@ -163,6 +213,8 @@ Criterios tomados donde el SRS no decide:
 ## Pendiente fuera de esta parte
 
 - Push en producción: crear el proyecto de EAS y las credenciales de Firebase ([docs/desplegar.md](docs/desplegar.md), paso 7).
-- Asociar la Ficha de Actividad (RF-068): depende del generador de PDF de la Parte 3.
+- Compartir el PDF (RF-104) usa `expo-sharing`, un módulo nativo nuevo: hay que compilar otro APK o
+  *development build* para probarlo en el celular.
+- Medir RNF-004 (PDF de 10 páginas en 20 s) en el Moto G22 de referencia.
 - Alojamiento de producción (RES-01, RES-06): elegido DonWeb + Supabase (ver [docs/desplegar.md](docs/desplegar.md)), todavía sin desplegar. Los backups diarios están armados (RNF-005 a RNF-010); falta medir en producción cuánto tarda una restauración completa.
 - Aviso de errores de la app móvil (RNF-034 del lado del celular): requiere elegir un servicio de reporte de cierres.

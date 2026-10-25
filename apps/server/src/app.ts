@@ -22,6 +22,7 @@ import { rutasArchivos } from './rutas/archivos';
 import { rutasAuth } from './rutas/auth';
 import { rutasDocumentos } from './rutas/documentos';
 import { rutasFichas } from './rutas/fichas';
+import { rutasFichasActividad } from './rutas/fichas-actividad';
 import { rutasImportacion } from './rutas/importacion';
 import { rutasPlataforma } from './rutas/plataforma';
 
@@ -123,6 +124,7 @@ export async function construirApp(deps: Dependencias): Promise<FastifyInstance>
   await app.register(async (r) => rutasArchivos(r, deps));
   await app.register(async (r) => rutasActividades(r, deps));
   await app.register(async (r) => rutasCalendario(r, deps));
+  await app.register(async (r) => rutasFichasActividad(r, deps));
 
   return app;
 }

@@ -206,6 +206,9 @@ export default function VistaActividad() {
 
         <View style={{ gap: espacio.s, marginTop: espacio.l }}>
           <Boton titulo="Reporte de asistencia" variante="secundario" onPress={() => router.push(`/actividad/${actividad.id}/reporte`)} />
+          {tienePermiso(p, 'fichaActividad', 'ver') ? (
+            <Boton titulo="Ficha de Actividad" variante="secundario" onPress={() => router.push(`/actividad/${actividad.id}/ficha`)} deshabilitado={sinConexion} />
+          ) : null}
           {tienePermiso(p, 'actividades', 'editar') && !cancelada && guardada ? (
             <>
               <Boton titulo="Editar actividad" variante="secundario" onPress={() => router.push(`/actividad/${actividad.id}/editar`)} deshabilitado={sinConexion} />

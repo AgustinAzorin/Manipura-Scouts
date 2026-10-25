@@ -62,6 +62,8 @@ const valores: Record<string, string[]> = {
   guardian: ['Fuego', 'Aire', 'Leyenda'],
   categoriaMiembro: ['Protagonista', 'Educador', 'Colaborador'],
   religion: ['Católica', 'Evangélica', 'Ninguna'],
+  // RD-005: categorías de los anexos de la Ficha de Actividad.
+  categoriaAnexo: ['Juego activo', 'Juego de técnica', 'Dinámica de integración', 'Reflexión'],
 };
 const ids: Record<string, string[]> = {};
 for (const [catalogo, nombres] of Object.entries(valores)) {

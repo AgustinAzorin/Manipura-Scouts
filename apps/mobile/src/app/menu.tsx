@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { formatearFechaHora, tienePermiso } from '@scouttracker/shared';
 import { useDatos } from '../lib/datos';
+import { useAnexosPendientes } from '../lib/fichaActividad';
 import { useSesion } from '../lib/sesion';
 import { Aviso, Boton, confirmar, ItemMenu, Pantalla, Parrafo, Subtitulo } from '../ui/componentes';
 
@@ -9,6 +10,7 @@ export default function Menu() {
   const { yo, contexto, cerrarSesion } = useSesion();
   const { snapshot, sinConexion, recargar, cargando, pendientes } = useDatos();
   const router = useRouter();
+  const { anexos } = useAnexosPendientes();
   if (!yo) return null;
   const incompletas = snapshot?.fichas.filter((f) => f.estado === 'incompleta').length ?? 0;
   const administra = yo.usuario.esAdminPlataforma || yo.gruposAdministrables.length > 0 || yo.ramasAdministrables.length > 0;
@@ -49,6 +51,11 @@ export default function Menu() {
           {tienePermiso(contexto.permisos, 'calendario', 'ver') ? (
             <ItemMenu titulo="Calendario" detalle="Actividades, cumpleaños, feriados y tus recordatorios" onPress={() => router.push('/calendario')} />
           ) : null}
+          <ItemMenu
+            titulo="Mis anexos pendientes"
+            detalle={anexos.length ? `${anexos.length} para completar (requiere conexión)` : 'Ninguno (requiere conexión)'}
+            onPress={() => router.push('/anexos-pendientes')}
+          />
         </View>
       ) : null}
       <View>
