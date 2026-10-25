@@ -53,11 +53,12 @@ export class Mailer {
   constructor(
     private readonly db: Db,
     private readonly transporte: TransporteMail,
+    private readonly ahora: () => Date = () => new Date(),
   ) {}
 
   /** Mails enviados hoy (hora de Argentina). */
   async enviadosHoy(): Promise<number> {
-    const inicio = new Date(`${hoyAR()}T00:00:00-03:00`);
+    const inicio = new Date(`${hoyAR(this.ahora())}T00:00:00-03:00`);
     const r = await this.db
       .selectFrom('mails')
       .select(sql<number>`count(*)::int`.as('n'))

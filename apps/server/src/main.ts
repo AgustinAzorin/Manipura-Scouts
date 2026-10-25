@@ -1,5 +1,5 @@
 import { construirApp, type Dependencias } from './app';
-import { leerConfig } from './config';
+import { cargarArchivoEnv, leerConfig } from './config';
 import { crearDb } from './db';
 import { migrar } from './migrar';
 import { AlmacenamientoDisco } from './servicios/almacenamiento';
@@ -7,6 +7,7 @@ import { Mailer, TransporteConsola, TransporteResend } from './servicios/mailer'
 import { notificarError } from './servicios/monitoreo';
 import { ejecutarTareas } from './servicios/tareas';
 
+cargarArchivoEnv();
 const config = leerConfig();
 const db = crearDb(config.databaseUrl);
 await migrar(db);

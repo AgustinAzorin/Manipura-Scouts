@@ -24,7 +24,7 @@ import {
   serializarFicha,
 } from '../servicios/fichas';
 import { suprimirFicha } from '../servicios/privacidad';
-import { compararNombres } from '@scouttracker/shared';
+import { compararNombres, hoyAR } from '@scouttracker/shared';
 import type { Db, FilaFicha } from '../db';
 
 const pRama = z.object({ ramaId: z.string().uuid() });
@@ -97,7 +97,7 @@ export async function rutasFichas(app: FastifyInstance, deps: Dependencias) {
     const camposPropios = await camposPropiosDeRama(deps.db, rama.id);
     const fila = await deps.db
       .transaction()
-      .execute((trx) => guardarFicha(trx, s, rama, null, pedido, camposPropios))
+      .execute((trx) => guardarFicha(trx, s, rama, null, pedido, camposPropios, { hoy: hoyAR(deps.ahora()) }))
       .catch(traducirErrorUnico);
     return reply.status(201).send(await fichaParaUsuario(deps, s, fila));
   });
@@ -131,7 +131,7 @@ export async function rutasFichas(app: FastifyInstance, deps: Dependencias) {
           const error: Omit<ConflictoEdicion, 'mensaje' | 'codigo'> = { versionActual: actual.version, cambios };
           throw conflicto(CODIGOS_ERROR.conflictoEdicion, 'Otra persona modificó esta ficha mientras la editabas', error as never);
         }
-        return guardarFicha(trx, s, { id: actual.rama_id, grupo_id: actual.grupo_id }, actual, pedido, camposPropios);
+        return guardarFicha(trx, s, { id: actual.rama_id, grupo_id: actual.grupo_id }, actual, pedido, camposPropios, { hoy: hoyAR(deps.ahora()) });
       })
       .catch(traducirErrorUnico);
     return fichaParaUsuario(deps, s, fila);

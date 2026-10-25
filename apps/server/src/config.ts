@@ -1,4 +1,15 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/**
+ * Lee las variables de `apps/server/.env` si existe (no se versiona). Las variables ya definidas
+ * en el entorno tienen prioridad.
+ */
+export function cargarArchivoEnv(): void {
+  const archivo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.env');
+  if (existsSync(archivo)) process.loadEnvFile(archivo);
+}
 
 export interface Config {
   puerto: number;

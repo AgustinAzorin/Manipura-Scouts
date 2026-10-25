@@ -1,9 +1,10 @@
-import { leerConfig } from '../config';
+import { cargarArchivoEnv, leerConfig } from '../config';
 import { crearDb } from '../db';
 import { AlmacenamientoDisco } from '../servicios/almacenamiento';
 import { Mailer, TransporteConsola } from '../servicios/mailer';
 import { ejecutarTareas } from '../servicios/tareas';
 
+cargarArchivoEnv();
 const config = leerConfig();
 const db = crearDb(config.databaseUrl);
 const r = await ejecutarTareas({

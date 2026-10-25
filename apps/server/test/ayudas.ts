@@ -40,7 +40,7 @@ export async function crearEntorno(): Promise<Entorno> {
     mailResponsableTecnico: 'agustin@scout.test',
     origenesCors: [],
   };
-  const deps: Dependencias = { db, config, mailer: new Mailer(db, mails), almacenamiento, ahora: () => reloj.ahora };
+  const deps: Dependencias = { db, config, mailer: new Mailer(db, mails, () => reloj.ahora), almacenamiento, ahora: () => reloj.ahora };
   const app = await construirApp(deps);
   return {
     app,

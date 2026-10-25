@@ -3,6 +3,7 @@ import type { Contexto, RespuestaLogin, RespuestaYo } from '@scouttracker/shared
 import { crearAlmacen } from './almacen';
 import { api, configurarApi, ErrorDelServidor, SinConexion } from './api';
 import { marcarLoginReciente } from './bloqueo';
+import { cargarServidor } from './servidor';
 
 /** Datos guardados para uso sin conexión: se borran al cerrar sesión (RF-013). */
 export const almacenDatos = crearAlmacen('datos');
@@ -47,6 +48,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     configurarApi({ token: null, alPerderSesion: () => void borrarTodo('Tu sesión terminó. Volvé a iniciar sesión.') });
     (async () => {
+      await cargarServidor();
       const g = await almacenDatos.leer<Guardado>('sesion');
       if (!g) return setEstado({ tipo: 'sinSesion' });
       configurarApi({ token: g.token });

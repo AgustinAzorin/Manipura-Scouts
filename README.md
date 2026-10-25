@@ -44,9 +44,15 @@ EXPO_PUBLIC_API_URL=http://192.168.0.10:3000 npx expo start
 ```
 
 La app usa módulos nativos (SecureStore, biometría, cámara), así que en el celular necesita un
-*development build* (`npx eas-cli@latest build --profile development`), no Expo Go. Para probar
-rápido en la compu, `npx expo start --web` funciona sin biometría y con el servidor arrancado con
-`ORIGENES_CORS=http://localhost:8081`.
+APK o un *development build*, no Expo Go. **Para probarla en un celular o en el emulador de Android
+Studio seguí [docs/probar-en-celular.md](docs/probar-en-celular.md)**: levanta PostgreSQL con
+Docker, carga datos ficticios (`npm run demo`) y explica cómo conectar el celular al servidor.
+
+Atajos desde la raíz: `npm run db` (PostgreSQL con Docker), `npm run demo`, `npm run servidor`,
+`npm run app` y `npm run android`. El servidor lee `apps/server/.env` si existe.
+
+Para probar rápido en la compu, `npx expo start --web` funciona sin biometría y con el servidor
+arrancado con `ORIGENES_CORS=http://localhost:8081`.
 
 Variables del servidor: ver `apps/server/.env.example`.
 

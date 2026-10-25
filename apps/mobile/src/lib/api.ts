@@ -1,7 +1,22 @@
 import { CODIGOS_ERROR, type ErrorApi } from '@scouttracker/shared';
 
-/** URL del servidor. Se define al compilar con EXPO_PUBLIC_API_URL. */
-export const URL_API = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+/** URL del servidor por defecto: se define al compilar con EXPO_PUBLIC_API_URL. */
+export const URL_API_POR_DEFECTO = normalizarUrl(process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000');
+let urlServidor = URL_API_POR_DEFECTO;
+
+export function normalizarUrl(url: string): string {
+  const u = url.trim().replace(/\/+$/, '');
+  return /^https?:\/\//.test(u) ? u : `http://${u}`;
+}
+
+/** URL del servidor en uso. Las builds de prueba permiten cambiarla (ver servidor.ts). */
+export function urlApi(): string {
+  return urlServidor;
+}
+
+export function usarServidor(url: string) {
+  urlServidor = normalizarUrl(url);
+}
 
 const TIEMPO_MAXIMO_MS = 20_000;
 
@@ -45,7 +60,7 @@ export async function pedir<T>(metodo: Metodo, ruta: string, cuerpo?: unknown): 
   const esFormulario = typeof FormData !== 'undefined' && cuerpo instanceof FormData;
   let r: Response;
   try {
-    r = await fetch(`${URL_API}${ruta}`, {
+    r = await fetch(`${urlServidor}${ruta}`, {
       method: metodo,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

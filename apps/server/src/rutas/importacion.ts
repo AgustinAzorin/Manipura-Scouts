@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import type { ResumenImportacion } from '@scouttracker/shared';
+import { hoyAR, type ResumenImportacion } from '@scouttracker/shared';
 import { sesionDe, type Dependencias } from '../app';
 import { validacion } from '../errores';
 import { importarTabla } from '../importacion/procesar';
@@ -21,7 +21,7 @@ export async function rutasImportacion(app: FastifyInstance, deps: Dependencias)
     if (!parte) throw validacion('Falta el archivo');
     const datos = await parte.toBuffer();
     const tabla = await leerPlanilla(parte.filename ?? '', datos);
-    const resumen = await importarTabla(deps.db, s.usuarioId, rama, tabla);
+    const resumen = await importarTabla(deps.db, s.usuarioId, rama, tabla, hoyAR(deps.ahora()));
     await auditar(deps.db, {
       accion: 'importacion',
       grupoId: rama.grupo_id,

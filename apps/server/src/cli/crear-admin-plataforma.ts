@@ -3,9 +3,12 @@
  *   DATABASE_URL=... npm run crear-admin -w @scouttracker/server -- "Nombre" mail@ejemplo.com
  * La contraseña se pide por la variable PASSWORD (al menos 10 caracteres).
  */
+import { cargarArchivoEnv } from '../config';
 import { crearDb } from '../db';
 import { migrar } from '../migrar';
 import { hashearPassword, LARGO_MINIMO_PASSWORD } from '../servicios/seguridad';
+
+cargarArchivoEnv();
 
 const [nombre, email] = process.argv.slice(2);
 const password = process.env.PASSWORD ?? '';

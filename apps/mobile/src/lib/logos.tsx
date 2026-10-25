@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Image, View } from 'react-native';
-import { URL_API, tokenActual } from './api';
+import { tokenActual, urlApi } from './api';
 import { almacenDatos } from './sesion';
 
 const memoria = new Map<string, string>();
@@ -27,7 +27,7 @@ async function cargarLogo(id: string): Promise<string | null> {
     return guardado;
   }
   try {
-    const r = await fetch(`${URL_API}/logos/${id}`, { headers: { Authorization: `Bearer ${tokenActual()}` } });
+    const r = await fetch(`${urlApi()}/logos/${id}`, { headers: { Authorization: `Bearer ${tokenActual()}` } });
     if (!r.ok) return null;
     const uri = `data:${r.headers.get('content-type') ?? 'image/png'};base64,${aBase64(new Uint8Array(await r.arrayBuffer()))}`;
     memoria.set(id, uri);

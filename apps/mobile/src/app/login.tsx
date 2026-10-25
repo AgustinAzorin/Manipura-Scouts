@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { mensajeDeError } from '../lib/api';
+import { mensajeDeError, urlApi } from '../lib/api';
+import { guardarServidor, PERMITIR_CAMBIAR_SERVIDOR, probarServidor } from '../lib/servidor';
 import { useSesion } from '../lib/sesion';
-import { Aviso, Boton, Campo, Pantalla, Parrafo, Titulo } from '../ui/componentes';
+import { Aviso, Boton, Campo, Pantalla, Parrafo, Tarjeta, Titulo } from '../ui/componentes';
 
 /** RF-011 */
 export default function Login() {
@@ -35,8 +36,62 @@ export default function Login() {
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
       <Campo etiqueta="Mail" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="username" />
       <Campo etiqueta="Contraseña" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" textContentType="password" onSubmitEditing={entrar} />
-      <Boton titulo="Entrar" onPress={entrar} cargando={enviando} />
+      <Boton titulo="Entrar" onPress={entrar} cargando={enviando || estado.tipo === 'cargando'} />
       <Boton titulo="Olvidé mi contraseña" variante="texto" onPress={() => router.push('/recuperar')} />
+      {/* Se muestra cuando ya se cargó el servidor guardado. */}
+      {PERMITIR_CAMBIAR_SERVIDOR && estado.tipo !== 'cargando' ? <ElegirServidor /> : null}
     </Pantalla>
+  );
+}
+
+/** Solo en las builds de prueba: a qué servidor se conecta la app. */
+function ElegirServidor() {
+  const [abierto, setAbierto] = useState(false);
+  const [actual, setActual] = useState(urlApi());
+  const [url, setUrl] = useState(actual);
+  const [probando, setProbando] = useState(false);
+  const [resultado, setResultado] = useState<{ ok: boolean; texto: string } | null>(null);
+
+  if (!abierto) {
+    return (
+      <Tarjeta>
+        <Parrafo suave>Versión de prueba · Servidor: {actual}</Parrafo>
+        <Boton titulo="Cambiar servidor" variante="secundario" onPress={() => setAbierto(true)} />
+      </Tarjeta>
+    );
+  }
+  return (
+    <Tarjeta>
+      <Campo
+        etiqueta="Dirección del servidor"
+        value={url}
+        onChangeText={setUrl}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="url"
+        ayuda="Ej.: https://algo.trycloudflare.com o http://192.168.0.10:3000"
+      />
+      {resultado ? <Aviso tipo={resultado.ok ? 'exito' : 'error'}>{resultado.texto}</Aviso> : null}
+      <Boton
+        titulo="Probar y guardar"
+        cargando={probando}
+        deshabilitado={!url.trim()}
+        onPress={async () => {
+          setProbando(true);
+          setResultado(null);
+          const ok = await probarServidor(url);
+          if (ok) {
+            const guardada = await guardarServidor(url);
+            setActual(guardada);
+            setUrl(guardada);
+            setResultado({ ok: true, texto: 'Conectado. Ya podés iniciar sesión.' });
+          } else {
+            setResultado({ ok: false, texto: 'No responde un servidor de ScoutTracker en esa dirección. Revisá la URL y que el celular esté en la misma red o que el túnel esté abierto.' });
+          }
+          setProbando(false);
+        }}
+      />
+      <Boton titulo="Cerrar" variante="texto" onPress={() => setAbierto(false)} />
+    </Tarjeta>
   );
 }
