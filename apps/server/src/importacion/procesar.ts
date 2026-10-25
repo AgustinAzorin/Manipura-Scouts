@@ -25,7 +25,7 @@ import { json, type Db } from '../db';
 import { COLUMNA, type Rama } from '../servicios/fichas';
 import type { Tabla } from './leer';
 import {
-  destinoDeEncabezado,
+  destinosDeEncabezados,
   interpretarCordi,
   interpretarCuota,
   interpretarSiNo,
@@ -71,13 +71,24 @@ function combinarDocumento(a: DocumentoImportado | undefined, b: DocumentoImport
   return { estado, fecha: conFecha.fecha, fechaDeLaPlanilla: conFecha.fechaDeLaPlanilla };
 }
 
+/** "Apellido, Nombre" (con coma) o, sin coma, según el orden de la columna. */
+function separarApellidoYNombre(v: string, orden: 'apellidoPrimero' | 'nombrePrimero'): [string, string] {
+  const coma = v.indexOf(',');
+  if (coma >= 0) return [v.slice(0, coma), v.slice(coma + 1)];
+  const partes = v.split(/\s+/);
+  return orden === 'apellidoPrimero' ? [partes[0]!, partes.slice(1).join(' ')] : [partes.at(-1)!, partes.slice(0, -1).join(' ')];
+}
+
 /**
  * RF-049 a RF-053: importa las filas de la planilla a la rama. Las filas con faltantes o valores
  * no reconocidos quedan como "Ficha incompleta"; las de DNI repetido y las de adultos se omiten.
+ * Las filas sin nombre, DNI ni fecha de nacimiento (totales y recuentos al pie) no se importan.
  */
 export async function importarTabla(db: Db, usuarioId: string, rama: Rama, tabla: Tabla, hoy = hoyAR()): Promise<ResumenImportacion> {
-  const destinos: (Destino | null)[] = tabla.encabezados.map(destinoDeEncabezado);
+  const destinos: (Destino | null)[] = destinosDeEncabezados(tabla.encabezados);
   const columnasIgnoradas = tabla.encabezados.filter((h, i) => h.trim() && destinos[i] === null);
+  // En la planilla actual la columna "Nombre" trae "Apellido, Nombre" y no hay columna de apellido.
+  const hayApellido = destinos.some((d) => d?.tipo === 'apellidoYNombre' || (d?.tipo === 'campo' && d.campo === 'apellido'));
 
   const [valores, equipos, existentes] = await Promise.all([
     db.selectFrom('catalogo_valores').select(['id', 'catalogo', 'nombre', 'activo', 'es_adulto']).where('rama_id', '=', rama.id).execute(),
@@ -101,7 +112,6 @@ export async function importarTabla(db: Db, usuarioId: string, rama: Rama, tabla
   await db.transaction().execute(async (trx) => {
     for (const { numero, celdas } of tabla.filas) {
       if (celdas.every((c) => !c.trim())) continue;
-      resumen.filasLeidas++;
       const motivos: string[] = [];
       const datos: DatosFicha = {};
       const cuotas: Cuotas = {};
@@ -117,13 +127,7 @@ export async function importarTabla(db: Db, usuarioId: string, rama: Rama, tabla
         if (!d || d.tipo === 'ignorar' || !v) return;
         switch (d.tipo) {
           case 'apellidoYNombre': {
-            let apellido: string;
-            let nombre: string;
-            const coma = v.indexOf(',');
-            const partes = v.split(/\s+/);
-            if (coma >= 0) [apellido, nombre] = [v.slice(0, coma), v.slice(coma + 1)];
-            else if (d.orden === 'apellidoPrimero') [apellido, nombre] = [partes[0]!, partes.slice(1).join(' ')];
-            else [apellido, nombre] = [partes.at(-1)!, partes.slice(0, -1).join(' ')];
+            const [apellido, nombre] = separarApellidoYNombre(v, d.orden);
             datos.apellido ??= apellido.trim() || null;
             datos.nombre ??= nombre.trim() || null;
             return;
@@ -143,9 +147,17 @@ export async function importarTabla(db: Db, usuarioId: string, rama: Rama, tabla
             return;
           }
           case 'campo':
-            asignarCampo(d.campo, v);
+            if (d.campo === 'nombre' && !hayApellido && v.includes(',')) {
+              const [apellido, nombre] = separarApellidoYNombre(v, 'apellidoPrimero');
+              datos.apellido = apellido.trim() || null;
+              datos.nombre = nombre.trim() || null;
+            } else asignarCampo(d.campo, v);
         }
       });
+
+      // Sin nombre, DNI ni fecha de nacimiento no es una persona: son los totales y recuentos del pie.
+      if (!datos.apellido && !datos.nombre && !datos.dni && !datos.fechaNacimiento) continue;
+      resumen.filasLeidas++;
 
       function asignarCampo(c: CampoFicha, v: string) {
         const def = DEF_CAMPO[c];

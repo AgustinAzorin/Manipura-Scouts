@@ -104,6 +104,50 @@ describe('RF-049 a RF-053 importar planilla', () => {
     expect(soloNombre.incompletaMotivos).toEqual(['Falta Apellido', 'Falta DNI', 'Falta Fecha de nacimiento', 'Falta Teléfono de emergencia']);
   });
 
+  it('planilla con fila de títulos arriba, "Apellido, Nombre" en Nombre y totales al pie', async () => {
+    // Misma estructura que la planilla real, con datos ficticios.
+    const texto = [
+      'c,,,,,,,,,,,,,,,Progresión,,,,Rol,,,,,,,,,,,,,,,,',
+      'N°,Nombre,DNI,F. Nac,Tel Emergencias,Religión,Cat. de Miembro,Día cumple,Edad,Va,Aut. retirarse solo,PDF,2do tel emergencias,Tel propio,Equipo,Promesa,Etapa,Elemento,Raíd,Cordi,Guardián,Diario de Marcha,Rol en la comu,TADA puede?,TADA tiene?,TADA,Mística,Ingreso al movimiento,Distrito,Afiliación,Cuota social,Retirarse sol@?,DDJJ Salud Cargada,Uso de imagen,Logo elemento,Logo promesa',
+      '1,"Prueba, Ana María",80.100.001,22/09/08,11 5000-0001,Católica,Protagonista,22,"18,1",Sí,Sí,,7700-0004,11 5000-2001,Tupac Amaru,c/promesa caminante,Descubrimiento,Fuego,1°R,C,Leyenda,,Enfermero,Sí,Sí,Tiene,,,,,,,Sí,,,',
+      '2,"Simulado Garcia, Nahuel",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,',
+      '3,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,',
+      '4,"Subjefe, Rita",40.100.019,08/03/02,11 5000-0019,Católica,SJ de unidad,8,,,,,,,,,,,,,,,,,,,,,,,,,,,,',
+      '5,"Padre, Quique",30.100.018,03/04/84,11 5000-0018,Católica,Papá colaborador,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,',
+      ',,,,11 5000-9999,,,,Beneficiarios:,15,15,,,,,,,,,,,,,,,,,,,,,,,,,',
+      ',,,,,,,,,,,,,,,,,,,,,,TADA tiene?,2,,0,,,,,,,,,,',
+      ',,,,,,,,,,,,,,Baden Powell,0,,,,,,,,,,,,,,,,SÍ,,,,',
+      ',,,,Católica,36,,,,,,,,,,,,Ini,,0,,,,,,,,,,,,,,,,',
+      ',,,,,,15,,7,,,,,,,,,,,,,,,,,,,,,,,,,,,',
+    ].join('\r\n');
+    const r = await esc.admin.subir(`/ramas/${esc.caminantes}/importar`, 'Datos Posta - Datos.csv', Buffer.from(texto), 'text/csv');
+    expect(r.statusCode).toBe(200);
+    const res = r.json();
+    expect(res).toMatchObject({ filasLeidas: 4, creadas: 2, incompletas: 1, adultos: [6, 7], omitidas: [], columnasIgnoradas: [] });
+    expect(res.detalleIncompletas).toEqual([{ fila: 4, motivos: ['Falta DNI', 'Falta Fecha de nacimiento', 'Falta Teléfono de emergencia'] }]);
+
+    const fichas = (await esc.admin.get(`/ramas/${esc.caminantes}/snapshot`)).json().fichas;
+    const ana = fichas.find((f: { apellido: string }) => f.apellido === 'Prueba');
+    expect(ana).toMatchObject({
+      nombre: 'Ana María',
+      dni: '80100001',
+      fechaNacimiento: '2008-09-22',
+      telEmergencia1: '1150000001',
+      telEmergencia2: '77000004',
+      telPropio: '1150002001',
+      equipoId: esc.equipos['Tupac Amaru'],
+      etapaId: esc.catalogo['Descubrimiento'],
+      guardianId: esc.catalogo['guardian:Leyenda'],
+      cordi: 'coordinador',
+      rolComunidad: 'Enfermero',
+      tieneTada: true,
+      estado: 'activa',
+    });
+    const docs = Object.fromEntries(ana.documentos.map((d: { tipo: string; estado: string }) => [d.tipo, d.estado]));
+    expect(docs).toMatchObject({ retiroSolo: 'presentadoAutoriza', ddjjSalud: 'presentado' });
+    expect(fichas.find((f: { apellido: string }) => f.apellido === 'Simulado Garcia')).toMatchObject({ nombre: 'Nahuel', estado: 'incompleta' });
+  });
+
   it('omite DNI que ya existen en el grupo', async () => {
     await esc.admin.post(`/ramas/${esc.unidad}/fichas`, fichaValida({ dni: '50101337' }));
     const r = (await esc.admin.subir(`/ramas/${esc.caminantes}/importar`, 'p.csv', csv([fila(1), fila(2)]))).json();

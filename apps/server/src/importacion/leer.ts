@@ -2,6 +2,7 @@ import { parse } from 'csv-parse/sync';
 import ExcelJS from 'exceljs';
 import { aISO } from '@scouttracker/shared';
 import { validacion } from '../errores';
+import { encabezadosReconocidos } from './mapeo';
 
 /** Celda leída: texto, o fecha ISO si la planilla la guardó como fecha. */
 export type Celda = string;
@@ -21,8 +22,19 @@ function decodificar(datos: Buffer): string {
   }
 }
 
+/** Filas del principio donde se busca el encabezado (puede haber títulos o agrupadores arriba). */
+const FILAS_A_REVISAR = 10;
+
 function separarEncabezado(filas: Celda[][]): Tabla {
-  const inicio = filas.findIndex((f) => f.filter((c) => c.trim() !== '').length >= 2);
+  // La fila de encabezados es la que tiene más columnas reconocidas; así se saltean filas de
+  // títulos como "Progresión" o "Rol" que agrupan columnas en la planilla actual.
+  let inicio = -1;
+  let mejor = 1;
+  filas.slice(0, FILAS_A_REVISAR).forEach((f, i) => {
+    const n = encabezadosReconocidos(f);
+    if (n > mejor) [inicio, mejor] = [i, n];
+  });
+  if (inicio < 0) inicio = filas.findIndex((f) => f.filter((c) => c.trim() !== '').length >= 2);
   if (inicio < 0) throw validacion('El archivo no tiene una fila de encabezados');
   return {
     encabezados: filas[inicio]!.map((c) => c.trim()),

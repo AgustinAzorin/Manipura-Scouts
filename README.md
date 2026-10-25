@@ -90,13 +90,14 @@ anterior en cada push (RNF-033).
 
 ## Importación de la planilla
 
-No se contó con la planilla real durante el desarrollo: los encabezados se reconocen con una lista
-de nombres habituales (`apps/server/src/importacion/mapeo.ts`) y el resumen informa las columnas
-que no se reconocieron. Antes de importar conviene cargar los equipos y los valores de catálogo de
+Los encabezados se reconocen con una lista de nombres (`apps/server/src/importacion/mapeo.ts`) que
+incluye los de la planilla actual, y el resumen informa las columnas que no se reconocieron. La
+estructura de la planilla actual (fila de títulos arriba, "Apellido, Nombre" en la columna Nombre,
+totales al pie) está cubierta por `importacion.test.ts` con datos ficticios. Antes de importar conviene cargar los equipos y los valores de catálogo de
 la rama, y marcar como "adulto" las categorías de miembro de educadores y colaboradores.
 Criterios tomados donde el SRS no decide:
 
-- Cuotas: "Pagada/Pagado/Sí" → Pagada; "Debe/Adeuda/No" → Adeudada; "Exenta/Beca" → Exenta; cualquier otro valor (por ejemplo "X") queda sin dato y la ficha incompleta (RF-050).
+- Cuotas: "Pagada/Pagado/Sí" → Pagada; "Debe/Adeuda/No" → Adeudada; "Exenta/Beca" → Exenta; cualquier otro valor (por ejemplo "X", "..." o un monto como "320") queda sin dato y la ficha incompleta (RF-050). La columna única "Cuota social" no se importa: la app la lleva mes por mes y se carga después.
 - Documentos: una fecha en la celda es la fecha de entrega; "Sí" cuenta como presentado (y "autoriza" en las autorizaciones) con la fecha de la importación; en las autorizaciones "No" se lee como "no autoriza".
 - Un valor no reconocido queda como motivo de la ficha incompleta hasta que se carga ese campo o el usuario marca la ficha como revisada.
 
