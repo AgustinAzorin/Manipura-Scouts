@@ -37,14 +37,15 @@ export async function rutasArchivos(app: FastifyInstance, deps: Dependencias) {
       .send(datos);
   });
 
-  // Logos de equipos y de valores de catálogo (RF-047): no son datos sensibles, pero solo los
-  // ve quien tiene acceso a la rama.
+  // Logos de equipos, de valores de catálogo (RF-047) y de la portada de la Ficha de Actividad
+  // (RF-088): no son datos sensibles, pero solo los ve quien tiene acceso a la rama.
   app.get('/logos/:archivoId', async (req, reply) => {
     const s = sesionDe(req);
     const { archivoId } = z.object({ archivoId: z.string().uuid() }).parse(req.params);
     const origen =
       (await deps.db.selectFrom('equipos').select(['grupo_id', 'rama_id']).where('logo_archivo_id', '=', archivoId).executeTakeFirst()) ??
-      (await deps.db.selectFrom('catalogo_valores').select(['grupo_id', 'rama_id']).where('logo_archivo_id', '=', archivoId).executeTakeFirst());
+      (await deps.db.selectFrom('catalogo_valores').select(['grupo_id', 'rama_id']).where('logo_archivo_id', '=', archivoId).executeTakeFirst()) ??
+      (await deps.db.selectFrom('cabeceras_ficha').select(['grupo_id', 'rama_id']).where('logo_archivo_id', '=', archivoId).executeTakeFirst());
     if (!origen) throw noEncontrado('El logo no existe');
     const equipos = await deps.db.selectFrom('equipos').select('id').where('rama_id', '=', origen.rama_id).execute();
     if (asignacionesEnRama(s.asignaciones, origen.grupo_id, origen.rama_id, new Set(equipos.map((e) => e.id))).length === 0) {

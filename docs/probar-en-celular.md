@@ -195,6 +195,26 @@ y arrancar el servidor con `EXPO_PUSH=si`.
 | Cambios | Mové de fecha una actividad con avisos: llega "Cambio en…"; cancelala: llega "Cancelada:…". | RF-085, RF-061, RF-062 |
 | Avisos manuales | Como admin: Administración → Avisos al grupo. Mandá uno a la rama Caminantes y otro "importante"; mirá el historial. | RF-086, RF-087 |
 
+## Qué probar (Parte 3: Ficha de Actividad)
+
+Compartir el PDF usa un módulo nativo nuevo (`expo-sharing`): hace falta **volver a compilar** el APK o
+el *development build*; con uno viejo la app no abre el menú de compartir. `npm run demo` carga las
+categorías de anexo de Caminantes. Todo esto requiere conexión.
+
+| Qué | Cómo | Requisito |
+|---|---|---|
+| Cabecera | Como admin: Administración → Rama Caminantes → Cabecera de la Ficha de Actividad. Cargá nombres, logo y educadores. | RF-088 |
+| Crear la ficha | En el campamento, "Ficha de Actividad" → Crear: toma la fecha y el lugar del campamento. Creá otra en otra actividad: el diagnóstico viene copiado. | RF-068, RF-089 |
+| Textos y áreas | Cargá la justificación, objetivos (uno por línea) y tres áreas; dejá una sin descripción y probá la versión final: la pide. | RF-090 a RF-092 |
+| Anexos | Agregá un anexo y asignáselo a `educador@demo.ar`. Con ese usuario: la nómina muestra "Tenés 1 anexo…" y se completa desde ahí. Sin título no se marca completo. | RF-095, RF-096 |
+| Materiales | Cargá "6 — palos de 1,5 m — por equipo": en la lista de compras del PDF figuran 24 (4 equipos activos en la demo). | RF-097, RF-099, RN-10 |
+| Grilla | Cargá filas desordenadas, con "Todos", educadores de la rama y un nombre escrito a mano, y una con anexo: en el PDF quedan por hora y la fila del anexo muestra sus materiales. | RF-093, RF-094, RF-098 |
+| Borrador y final | Con un anexo de la grilla pendiente: el borrador dice "BORRADOR" en cada página y "Pendiente — asignado a…"; la versión final se rechaza e indica el anexo. | RF-100, RF-101 |
+| PDF | Compará el PDF con "Actividad Posta 14 de Marzo": mismo orden de secciones y mismas tablas. | RF-102, RES-04 |
+| Compartir | "Compartir PDF" abre el menú del celular con el archivo (WhatsApp, Drive, mail). Generá otro: queda solo el último. | RF-103, RF-104, RI-009 |
+| Reutilizar | En otra ficha, "Copiar un anexo de otra ficha", cambiale la duración: el original no cambia. | RF-105 |
+| Tiempo | Cronometrá la generación de una ficha de 10 páginas en el Moto G22 (meta: 20 s). | RNF-004 |
+
 ## Problemas comunes
 
 - **"No responde un servidor de ScoutTracker en esa dirección"**: el servidor no está andando, el túnel se cerró, la IP cambió, o el firewall bloquea el puerto 3000. Probá abrir `https://…/salud` en el navegador del celular: tiene que mostrar `{"ok":true}`.

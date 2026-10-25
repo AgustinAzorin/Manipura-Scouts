@@ -6,3 +6,4 @@ export * from './api';
 export * from './nomina';
 export * from './actividades';
 export * from './calendario';
+export * from './fichaActividad';

@@ -15,6 +15,7 @@ import {
   type FiltrosNomina,
 } from '@scouttracker/shared';
 import { useDatos } from '../lib/datos';
+import { useAnexosPendientes } from '../lib/fichaActividad';
 import { Logo } from '../lib/logos';
 import { usePreferenciasNomina } from '../lib/preferencias';
 import { useSesion } from '../lib/sesion';
@@ -29,6 +30,7 @@ export default function Nomina() {
   const router = useRouter();
   const params = useLocalSearchParams<{ equipo?: string }>();
   const { prefs, cambiar } = usePreferenciasNomina(yo?.usuario.id, contexto?.ramaId);
+  const { anexos } = useAnexosPendientes();
   const [busqueda, setBusqueda] = useState('');
   const [modal, setModal] = useState<'filtros' | 'columnas' | null>(null);
   const equipoId = params.equipo ?? null;
@@ -94,6 +96,14 @@ export default function Nomina() {
         <View style={e.franjaSinConexion} accessibilityRole="alert">
           <Text style={e.textoFranja}>Sin conexión. Datos al {formatearFechaHora(snapshot.generadoEn)}</Text>
         </View>
+      ) : null}
+      {/* RF-095: anexos de Fichas de Actividad que el usuario tiene que completar. */}
+      {anexos.length ? (
+        <Pressable accessibilityRole="button" onPress={() => router.push('/anexos-pendientes')} style={e.franjaAnexos}>
+          <Text style={e.textoAnexos}>
+            {anexos.length === 1 ? 'Tenés 1 anexo de una Ficha de Actividad para completar' : `Tenés ${anexos.length} anexos de Fichas de Actividad para completar`} ›
+          </Text>
+        </Pressable>
       ) : null}
       <View style={e.barra}>
         <TextInput
@@ -306,4 +316,6 @@ const e = StyleSheet.create({
   cuenta: { fontSize: texto.chico, color: colores.textoSuave },
   franjaSinConexion: { backgroundColor: colores.aviso, padding: espacio.s },
   textoFranja: { color: colores.primarioTexto, fontWeight: '700', fontSize: texto.normal - 1, textAlign: 'center' },
+  franjaAnexos: { backgroundColor: colores.infoSuave, borderLeftWidth: 6, borderLeftColor: colores.info, padding: espacio.m, minHeight: TACTIL_MINIMO, justifyContent: 'center' },
+  textoAnexos: { color: colores.texto, fontWeight: '600', fontSize: texto.normal - 1 },
 });
