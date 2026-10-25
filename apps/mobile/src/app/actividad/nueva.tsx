@@ -4,7 +4,7 @@ import { api, mensajeDeError } from '../../lib/api';
 import { useDatos } from '../../lib/datos';
 import { useSesion } from '../../lib/sesion';
 import { Aviso, Cargando, Pantalla, Parrafo } from '../../ui/componentes';
-import { FormularioActividad } from '../../ui/formulario-actividad';
+import { destinosDeAvisos, FormularioActividad } from '../../ui/formulario-actividad';
 
 /** RF-060 / RF-064: crea la actividad e inscribe a los protagonistas activos del alcance. */
 export default function NuevaActividad() {
@@ -38,6 +38,7 @@ export default function NuevaActividad() {
       <FormularioActividad
         tipos={snapshot.tiposActividad}
         alcances={alcances}
+        destinos={destinosDeAvisos(snapshot, contexto.ramaNombre)}
         textoGuardar="Crear actividad"
         alGuardar={async (d) => {
           try {
@@ -51,6 +52,8 @@ export default function NuevaActividad() {
               alcance: d.alcance,
               ramaId: d.alcance === 'grupo' ? null : contexto.ramaId,
               equipoId: d.equipoId,
+              avisos: d.avisos,
+              destinoAvisos: d.destinoAvisos,
             });
             await recargar();
             router.replace(`/actividad/${a.id}`);

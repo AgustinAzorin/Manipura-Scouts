@@ -3,7 +3,7 @@ import { api, mensajeDeError } from '../../../lib/api';
 import { useActividad } from '../../../lib/actividades';
 import { useDatos } from '../../../lib/datos';
 import { Aviso, Cargando, Pantalla } from '../../../ui/componentes';
-import { FormularioActividad } from '../../../ui/formulario-actividad';
+import { destinosDeAvisos, FormularioActividad } from '../../../ui/formulario-actividad';
 
 /** RF-061. El alcance no cambia: para otro alcance se cancela y se crea otra actividad. */
 export default function EditarActividad() {
@@ -18,10 +18,19 @@ export default function EditarActividad() {
       <FormularioActividad
         tipos={snapshot.tiposActividad}
         inicial={actividad}
+        destinos={destinosDeAvisos(snapshot, snapshot.rama.nombre)}
         textoGuardar="Guardar cambios"
         alGuardar={async (d) => {
           try {
-            await api.patch(`/actividades/${actividad.id}`, { tipoId: d.tipoId, nombre: d.nombre, inicio: d.inicio, fin: d.fin, lugar: d.lugar });
+            await api.patch(`/actividades/${actividad.id}`, {
+              tipoId: d.tipoId,
+              nombre: d.nombre,
+              inicio: d.inicio,
+              fin: d.fin,
+              lugar: d.lugar,
+              avisos: d.avisos,
+              destinoAvisos: d.destinoAvisos,
+            });
             await recargar();
             router.back();
           } catch (e) {

@@ -40,12 +40,21 @@ export default function Menu() {
         <ItemMenu titulo="Ex integrantes" detalle="Fichas archivadas (requiere conexión)" onPress={() => router.push('/ex-integrantes')} />
         {yo.contextos.length > 1 ? <ItemMenu titulo="Cambiar de rama o grupo" onPress={() => router.push('/contexto')} /> : null}
       </View>
-      {contexto && tienePermiso(contexto.permisos, 'actividades', 'ver') ? (
+      {contexto && (tienePermiso(contexto.permisos, 'actividades', 'ver') || tienePermiso(contexto.permisos, 'calendario', 'ver')) ? (
         <View>
           <Subtitulo>Actividades</Subtitulo>
-          <ItemMenu titulo="Actividades" detalle="Confirmaciones, asistencia y autorizaciones (funciona sin conexión)" onPress={() => router.push('/actividades')} />
+          {tienePermiso(contexto.permisos, 'actividades', 'ver') ? (
+            <ItemMenu titulo="Actividades" detalle="Confirmaciones, asistencia y autorizaciones (funciona sin conexión)" onPress={() => router.push('/actividades')} />
+          ) : null}
+          {tienePermiso(contexto.permisos, 'calendario', 'ver') ? (
+            <ItemMenu titulo="Calendario" detalle="Actividades, cumpleaños, feriados y tus recordatorios" onPress={() => router.push('/calendario')} />
+          ) : null}
         </View>
       ) : null}
+      <View>
+        <Subtitulo>Cuenta</Subtitulo>
+        <ItemMenu titulo="Avisos" detalle="Qué avisos recibís por notificación y por mail" onPress={() => router.push('/avisos')} />
+      </View>
       {administra ? (
         <View>
           <Subtitulo>Administración</Subtitulo>

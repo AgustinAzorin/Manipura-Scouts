@@ -20,10 +20,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: NOMBRE,
   slug: config.slug ?? 'scouttracker',
   ios: { ...config.ios, bundleIdentifier: `ar.scouttracker.app${SUFIJO}` },
-  android: { ...config.android, package: `ar.scouttracker.app${SUFIJO}` },
+  android: {
+    ...config.android,
+    package: `ar.scouttracker.app${SUFIJO}`,
+    // RF-080: en Android los push llegan por Firebase. EAS entrega el archivo como variable de tipo archivo.
+    ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
+  },
   plugins: [...(config.plugins ?? []), ['expo-build-properties', { android: { usesCleartextTraffic: !PRODUCCION } }]],
   extra: {
     ...config.extra,
+    // RF-080: el servicio de push de Expo necesita el proyecto de EAS (`eas init` lo crea).
+    ...(process.env.EAS_PROJECT_ID ? { eas: { projectId: process.env.EAS_PROJECT_ID } } : {}),
     variante: VARIANTE,
     permitirCambiarServidor: !PRODUCCION,
   },

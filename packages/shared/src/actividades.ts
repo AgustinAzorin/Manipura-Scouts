@@ -1,5 +1,6 @@
 /** Actividades, asistencia y autorizaciones (RF-057 a RF-071). Reglas que usan el servidor y la app. */
 import type { ArchivoDTO } from './api';
+import type { Antelacion, Destino } from './calendario';
 import { formatearFecha, hoyAR, type FechaISO } from './fechas';
 import { tienePermiso, type Alcance, type AsignacionConRol } from './permisos';
 
@@ -91,6 +92,9 @@ export interface ActividadDTO {
   ramaId: string | null;
   equipoId: string | null;
   canceladaEn: string | null;
+  /** RF-078: avisos programados (hasta 2) y a quién llegan (RF-079). */
+  avisos: Antelacion[];
+  destinoAvisos: Destino;
   /** Inscriptos que el usuario puede ver, de la rama en la que trabaja. */
   inscripciones: InscripcionDTO[];
 }

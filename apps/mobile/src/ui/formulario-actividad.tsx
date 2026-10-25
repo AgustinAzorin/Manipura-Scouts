@@ -8,11 +8,16 @@ import {
   instanteAR,
   interpretarFecha,
   interpretarHora,
+  ANTELACIONES,
+  NOMBRE_ANTELACION,
   type ActividadDTO,
   type Alcance,
+  type Antelacion,
+  type Destino,
+  type SnapshotRama,
   type TipoActividadDTO,
 } from '@scouttracker/shared';
-import { Aviso, Boton, Campo, Selector, Tarjeta } from './componentes';
+import { Aviso, Boton, Campo, Parrafo, Selector, Subtitulo, Tarjeta, type Opcion } from './componentes';
 import { espacio } from './tema';
 
 export interface DatosActividad {
@@ -23,7 +28,18 @@ export interface DatosActividad {
   lugar: string | null;
   alcance: Alcance;
   equipoId: string | null;
+  /** RF-078 / RF-079 */
+  avisos: Antelacion[];
+  destinoAvisos: Destino;
 }
+
+/** Destino como texto para el selector: 'alcance' o 'tipo:id'. */
+const aTexto = (d: Destino) => ('id' in d ? `${d.tipo}:${d.id}` : d.tipo);
+const deTexto = (t: string): Destino => {
+  const [tipo, id] = t.split(':');
+  return id ? ({ tipo, id } as Destino) : { tipo: 'alcance' };
+};
+const OPCIONES_AVISO = ANTELACIONES.map((a) => ({ valor: a, etiqueta: NOMBRE_ANTELACION[a] }));
 
 /** Opción de alcance: 'rama', 'grupo' o el id de un equipo. */
 type OpcionAlcance = string;
@@ -36,10 +52,13 @@ export function FormularioActividad({
   tipos,
   inicial,
   alcances,
+  destinos,
   textoGuardar,
   alGuardar,
 }: {
   tipos: TipoActividadDTO[];
+  /** Opciones de destinatarios de los avisos (RF-079), con 'alcance' primero. */
+  destinos: Opcion[];
   inicial?: ActividadDTO;
   /** Alcances que se pueden elegir al crear; sin esto el alcance no se muestra. */
   alcances?: { valor: OpcionAlcance; etiqueta: string }[];
@@ -54,6 +73,9 @@ export function FormularioActividad({
   const [horaFin, setHoraFin] = useState(inicial ? horaAR(inicial.fin) : '');
   const [lugar, setLugar] = useState(inicial?.lugar ?? '');
   const [alcance, setAlcance] = useState<OpcionAlcance | null>(alcances?.[0]?.valor ?? null);
+  const [aviso1, setAviso1] = useState<Antelacion | null>(inicial?.avisos[0] ?? null);
+  const [aviso2, setAviso2] = useState<Antelacion | null>(inicial?.avisos[1] ?? null);
+  const [destino, setDestino] = useState(aTexto(inicial?.destinoAvisos ?? { tipo: 'alcance' }));
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -78,6 +100,7 @@ export function FormularioActividad({
     if (!hi) e.horaInicio = 'Hora inválida (hh:mm)';
     if (!hf) e.horaFin = 'Hora inválida (hh:mm)';
     if (alcances && !alcance) e.alcance = 'Elegí para quién es';
+    if (aviso1 && aviso1 === aviso2) e.aviso2 = 'Elegí una antelación distinta';
     if (fi && ff && hi && hf && instanteAR(ff, hf) < instanteAR(fi, hi)) e.fechaFin = 'El fin no puede ser anterior al inicio';
     setErrores(e);
     if (Object.keys(e).length) return;
@@ -91,6 +114,8 @@ export function FormularioActividad({
         lugar: lugar.trim() || null,
         alcance: alcance === 'grupo' ? 'grupo' : alcance === 'rama' || !alcance ? 'rama' : 'equipo',
         equipoId: alcance && alcance !== 'grupo' && alcance !== 'rama' ? alcance : null,
+        avisos: [aviso1, aviso2].filter((a): a is Antelacion => !!a),
+        destinoAvisos: deTexto(destino),
       });
     } catch (x) {
       setError(x instanceof Error ? x.message : 'No se pudo guardar');
@@ -128,7 +153,24 @@ export function FormularioActividad({
         </View>
         <Campo etiqueta="Lugar" value={lugar} onChangeText={setLugar} placeholder="Opcional" />
       </Tarjeta>
+      <Tarjeta>
+        <Subtitulo>Avisos</Subtitulo>
+        <Parrafo suave>Hasta 2, por notificación y por mail. Si la actividad cambia o se cancela, se avisa a los mismos destinatarios.</Parrafo>
+        <Selector etiqueta="Primer aviso" opciones={OPCIONES_AVISO} valor={aviso1} alCambiar={(v) => setAviso1(v as Antelacion | null)} textoVacio="Sin aviso" />
+        <Selector etiqueta="Segundo aviso" opciones={OPCIONES_AVISO} valor={aviso2} alCambiar={(v) => setAviso2(v as Antelacion | null)} textoVacio="Sin aviso" error={errores.aviso2} />
+        {aviso1 || aviso2 ? <Selector etiqueta="A quién le llegan" opciones={destinos} valor={destino} alCambiar={(v) => setDestino(v as string)} permitirVacio={false} /> : null}
+      </Tarjeta>
       <Boton titulo={textoGuardar} onPress={() => void guardar()} cargando={guardando} />
     </View>
   );
+}
+
+/** RF-079: a quién pueden llegar los avisos: el alcance de la actividad, la rama, un equipo o un rol. */
+export function destinosDeAvisos(snapshot: SnapshotRama, ramaNombre: string): Opcion[] {
+  return [
+    { valor: 'alcance', etiqueta: 'Todos los que ven la actividad' },
+    { valor: `rama:${snapshot.rama.id}`, etiqueta: `Educadores de la rama ${ramaNombre}` },
+    ...snapshot.rama.equipos.filter((e) => e.activo).map((e) => ({ valor: `equipo:${e.id}`, etiqueta: `Educadores del equipo ${e.nombre}` })),
+    ...snapshot.roles.map((r) => ({ valor: `rol:${r.id}`, etiqueta: `Rol ${r.nombre}`, detalle: 'Dentro del alcance de la actividad' })),
+  ];
 }

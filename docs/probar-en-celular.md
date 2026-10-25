@@ -174,6 +174,27 @@ semanas con 18 confirmados y 2 de ellos sin autorización.
 | Porcentaje de asistencia | Abrí una ficha: muestra la asistencia del año. | RF-069 |
 | Reporte | En una actividad, "Reporte de asistencia"; en Actividades anteriores, las de otros años. | RF-070 |
 
+## Qué probar (Parte 2: calendario y avisos)
+
+En el servidor de desarrollo los push se escriben en su consola (`[push] …`). Para que lleguen de verdad
+al celular hacen falta la build con el proyecto de EAS y Firebase ([desplegar.md](desplegar.md), paso 7)
+y arrancar el servidor con `EXPO_PUSH=si`.
+
+| Qué | Cómo | Requisito |
+|---|---|---|
+| Vistas | Menú → Calendario: cambiá entre Mes, Semana y Día. | RF-072 |
+| Actividades | El campamento de la demo aparece en sus tres días, con el color de su tipo. Con `lector@demo.ar` (equipo Cóndor) no se ven las de otros equipos. | RF-073, RN-19 |
+| Cumpleaños | Cada protagonista activo aparece el día de su cumpleaños; uno archivado, no. | RF-074 |
+| Feriados | Al arrancar, el servidor trae los nacionales de ArgentinaDatos. Como admin: Administración → Feriados → cargá uno propio. | RF-075, RF-076 |
+| Recordatorios | "+ Recordatorio": lo ves vos y no otro usuario. Tocalo para borrarlo. | RF-077 |
+| Avisos programados | Creá una actividad para dentro de 2 horas con aviso "1 hora antes": a la hora llega el push (o el log `[push]`) y el mail. No se puede elegir un tercer aviso. | RF-078, RN-16 |
+| Destinatarios | Elegí "Rol Jefe de rama": solo les llega a ellos. | RF-079 |
+| Tocar el aviso | Con la app cerrada, tocá la notificación: abre la actividad. | RF-081 |
+| Aviso de cumpleaños | A las 9:00 del día llega el aviso a los educadores de la rama. | RF-083, RN-15 |
+| Preferencias | Menú → Avisos: apagá el mail de cumpleaños y comprobá que llega solo el push. | RF-084 |
+| Cambios | Mové de fecha una actividad con avisos: llega "Cambio en…"; cancelala: llega "Cancelada:…". | RF-085, RF-061, RF-062 |
+| Avisos manuales | Como admin: Administración → Avisos al grupo. Mandá uno a la rama Caminantes y otro "importante"; mirá el historial. | RF-086, RF-087 |
+
 ## Problemas comunes
 
 - **"No responde un servidor de ScoutTracker en esa dirección"**: el servidor no está andando, el túnel se cerró, la IP cambió, o el firewall bloquea el puerto 3000. Probá abrir `https://…/salud` en el navegador del celular: tiene que mostrar `{"ok":true}`.

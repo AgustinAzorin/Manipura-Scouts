@@ -1,5 +1,7 @@
 import { sql } from 'kysely';
 import type { Dependencias } from '../app';
+import { actualizarFeriados } from './feriados';
+import { notificarError } from './monitoreo';
 import { anonimizarVencidas } from './privacidad';
 
 /** RN-20 */
@@ -65,5 +67,10 @@ export async function ejecutarTareas(deps: Dependencias) {
   const equipos = await eliminarEquiposVencidos(deps);
   const anonimizadas = await anonimizarVencidas(deps);
   await limpiarVencidos(deps);
-  return { equipos, anonimizadas };
+  // RF-075: si la fuente pública falla, quedan los feriados guardados y los manuales (RF-076).
+  const feriados = await actualizarFeriados(deps).catch(async (e) => {
+    await notificarError(deps, e, 'feriados').catch(() => {});
+    return [] as number[];
+  });
+  return { equipos, anonimizadas, feriados };
 }

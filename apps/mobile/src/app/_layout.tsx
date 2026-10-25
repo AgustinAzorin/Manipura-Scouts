@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { BloqueoProvider } from '../lib/bloqueo';
 import { DatosProvider } from '../lib/datos';
+import { useAvisos } from '../lib/notificaciones';
 import { SesionProvider, useSesion } from '../lib/sesion';
 import { colores } from '../ui/tema';
 
@@ -12,6 +13,7 @@ function Raiz() {
   const { estado } = useSesion();
   const ruta = usePathname();
   const router = useRouter();
+  useAvisos(estado.tipo === 'conSesion' ? estado.token : null);
 
   useEffect(() => {
     if (estado.tipo === 'sinSesion' && !RUTAS_PUBLICAS.includes(ruta)) router.replace('/login');
@@ -51,6 +53,8 @@ function Raiz() {
           <Stack.Screen name="actividad/[id]/inscriptos" options={{ title: 'Inscriptos' }} />
           <Stack.Screen name="actividad/[id]/reporte" options={{ title: 'Reporte de asistencia' }} />
           <Stack.Screen name="actividad/[id]/autorizacion" options={{ title: 'Autorización' }} />
+          <Stack.Screen name="calendario" options={{ title: 'Calendario' }} />
+          <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
           <Stack.Screen name="admin/index" options={{ title: 'Administración' }} />
           <Stack.Screen name="admin/plataforma" options={{ title: 'Grupos' }} />
           <Stack.Screen name="admin/grupo/[grupoId]/usuarios" options={{ title: 'Usuarios' }} />
@@ -59,6 +63,8 @@ function Raiz() {
           <Stack.Screen name="admin/grupo/[grupoId]/rol/[rolId]" options={{ title: 'Rol' }} />
           <Stack.Screen name="admin/grupo/[grupoId]/ramas" options={{ title: 'Ramas' }} />
           <Stack.Screen name="admin/grupo/[grupoId]/tipos-actividad" options={{ title: 'Tipos de actividad' }} />
+          <Stack.Screen name="admin/grupo/[grupoId]/feriados" options={{ title: 'Feriados' }} />
+          <Stack.Screen name="admin/grupo/[grupoId]/avisos" options={{ title: 'Avisos al grupo' }} />
           <Stack.Screen name="admin/rama/[ramaId]/index" options={{ title: 'Rama' }} />
           <Stack.Screen name="admin/rama/[ramaId]/equipos" options={{ title: 'Equipos' }} />
           <Stack.Screen name="admin/rama/[ramaId]/catalogos" options={{ title: 'Catálogos' }} />

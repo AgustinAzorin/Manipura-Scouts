@@ -1,5 +1,6 @@
 /** Tipos de las respuestas de la API compartidos entre el servidor y la app. */
 import type { ActividadDTO, AsistenciaAnio, TipoActividadDTO } from './actividades';
+import type { FeriadoDTO, RecordatorioDTO } from './calendario';
 import type { FechaISO } from './fechas';
 import type {
   CampoFicha,
@@ -148,6 +149,12 @@ export interface SnapshotRama {
   actividades: ActividadDTO[];
   /** RF-069: asistencia del año calendario por ficha. */
   asistenciaAnio: Record<string, AsistenciaAnio>;
+  /** RF-075 / RF-076: feriados de los últimos 60 días hasta fin del año siguiente. */
+  feriados: FeriadoDTO[];
+  /** RF-077: recordatorios del usuario en el mismo período. */
+  recordatorios: RecordatorioDTO[];
+  /** Roles del grupo, para elegir destinatarios de los avisos (RF-079). */
+  roles: { id: string; nombre: string }[];
 }
 
 export interface CambioHistorialDTO {

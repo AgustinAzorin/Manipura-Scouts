@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import {
+  ANTELACIONES,
   CONFIRMACIONES,
   ESTADOS_AUTORIZACION_ACTIVIDAD,
   esColor,
@@ -8,6 +9,7 @@ import {
   puede,
   TIPOS_ARCHIVO_PERMITIDOS,
   type ActividadDTO,
+  type Destino,
   type RegistroActividad,
   type ResultadoRegistro,
   type TipoActividadDTO,
@@ -25,6 +27,8 @@ import {
   tiposDeGrupo,
 } from '../servicios/actividades';
 import { auditar } from '../servicios/auditoria';
+import { avisarCambio, avisarCancelacion, programarAvisos, tieneAvisos, validarDestino } from '../servicios/avisos';
+import { notificarError } from '../servicios/monitoreo';
 import { cargarRama, objetivoFicha } from '../servicios/fichas';
 import { leerArchivoSubido } from '../servicios/subidas';
 import { enlaceArchivo } from './archivos';
@@ -45,12 +49,28 @@ const esquemaTipo = z.object({
 
 const instante = z.string().datetime({ offset: true });
 
+/** RF-079: el destino de los avisos de una actividad (el de todo el grupo es solo para avisos manuales). */
+export const esquemaDestino = z.discriminatedUnion('tipo', [
+  z.object({ tipo: z.literal('alcance') }),
+  z.object({ tipo: z.literal('grupo') }),
+  z.object({ tipo: z.literal('rama'), id: z.string().uuid() }),
+  z.object({ tipo: z.literal('equipo'), id: z.string().uuid() }),
+  z.object({ tipo: z.literal('rol'), id: z.string().uuid() }),
+]);
+
 const esquemaDatosActividad = z.object({
   tipoId: z.string().uuid(),
   nombre: z.string().trim().min(1, 'Falta el nombre').max(200),
   inicio: instante,
   fin: instante,
   lugar: z.string().trim().max(300).nullish(),
+  // RF-078 / RN-16: hasta 2 avisos, sin repetir antelación.
+  avisos: z
+    .array(z.enum(ANTELACIONES))
+    .max(2, 'Una actividad admite hasta 2 avisos')
+    .refine((l) => new Set(l).size === l.length, 'Hay avisos repetidos')
+    .optional(),
+  destinoAvisos: esquemaDestino.refine((d) => d.tipo !== 'grupo', 'Elegí otro destino').optional(),
 });
 
 const esquemaRegistro = z.discriminatedUnion('campo', [
@@ -201,6 +221,8 @@ export async function rutasActividades(app: FastifyInstance, deps: Dependencias)
       if (!eq.activo) throw validacion('El equipo está desactivado');
     }
     exigir(s, 'actividades', 'crear', { grupoId: d.grupoId, ramaId, equipoId }, 'No tenés permiso para crear actividades con ese alcance');
+    const destino: Destino = d.destinoAvisos ?? { tipo: 'alcance' };
+    await validarDestino(deps.db, d.grupoId, destino);
     const a = await deps.db.transaction().execute(async (trx) => {
       const a = await trx
         .insertInto('actividades')
@@ -215,17 +237,20 @@ export async function rutasActividades(app: FastifyInstance, deps: Dependencias)
           rama_id: ramaId,
           equipo_id: equipoId,
           creado_por: s.usuarioId,
+          destino_avisos: JSON.stringify(destino),
         })
         .returningAll()
         .executeTakeFirstOrThrow();
       await inscribirAlcance(trx, a);
+      await programarAvisos(trx, a, d.avisos ?? [], deps.ahora());
       return a;
     });
     return reply.status(201).send(await respuesta(s, a.id, ramaId));
   });
 
   // RF-061. El alcance no cambia: para otro alcance se cancela y se crea otra actividad.
-  // TODO(RF-085): reprogramar los avisos y avisar el cambio cuando lleguen los avisos.
+  // Si cambian la fecha o la hora, los avisos se reprograman; si además ya tenía avisos, se avisa el
+  // cambio de fecha, hora o lugar (RF-085).
   app.patch('/actividades/:id', async (req) => {
     const s = sesionDe(req);
     const { id } = pId.parse(req.params);
@@ -238,23 +263,35 @@ export async function rutasActividades(app: FastifyInstance, deps: Dependencias)
       const t = await tipoDelGrupo(a.grupo_id, d.tipoId);
       if (!t.activo) throw validacion('El tipo de actividad está desactivado', { tipoId: 'Elegí otro tipo' });
     }
-    await deps.db
-      .updateTable('actividades')
-      .set({
-        ...(d.tipoId !== undefined && { tipo_id: d.tipoId }),
-        ...(d.nombre !== undefined && { nombre: d.nombre }),
-        ...(d.inicio !== undefined && { inicio: d.inicio }),
-        ...(d.fin !== undefined && { fin: d.fin }),
-        ...(d.lugar !== undefined && { lugar: d.lugar || null }),
-        actualizado_en: deps.ahora(),
-      })
-      .where('id', '=', a.id)
-      .execute();
+    if (d.destinoAvisos) await validarDestino(deps.db, a.grupo_id, d.destinoAvisos);
+    const teniaAvisos = await tieneAvisos(deps.db, a.id);
+    const nueva = await deps.db.transaction().execute(async (trx) => {
+      const nueva = await trx
+        .updateTable('actividades')
+        .set({
+          ...(d.tipoId !== undefined && { tipo_id: d.tipoId }),
+          ...(d.nombre !== undefined && { nombre: d.nombre }),
+          ...(d.inicio !== undefined && { inicio: d.inicio }),
+          ...(d.fin !== undefined && { fin: d.fin }),
+          ...(d.lugar !== undefined && { lugar: d.lugar || null }),
+          ...(d.destinoAvisos !== undefined && { destino_avisos: JSON.stringify(d.destinoAvisos) }),
+          actualizado_en: deps.ahora(),
+        })
+        .where('id', '=', a.id)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      const actuales = (await trx.selectFrom('avisos_actividad').select('antelacion').where('actividad_id', '=', a.id).execute()).map((x) => x.antelacion);
+      await programarAvisos(trx, nueva, d.avisos ?? actuales, deps.ahora());
+      return nueva;
+    });
+    const cambio =
+      nueva.inicio.getTime() !== a.inicio.getTime() || nueva.fin.getTime() !== a.fin.getTime() || (nueva.lugar ?? '') !== (a.lugar ?? '');
+    // Un problema al avisar no deshace el cambio ya guardado.
+    if (cambio && teniaAvisos) await avisarCambio(deps, nueva).catch((e) => notificarError(deps, e, 'aviso de cambio').catch(() => {}));
     return { ok: true };
   });
 
-  // RF-062: queda visible como cancelada.
-  // TODO(RF-085): anular los avisos pendientes y avisar la cancelación cuando lleguen los avisos.
+  // RF-062: queda visible como cancelada. Sus avisos pendientes se anulan y se avisa la cancelación (RF-085).
   app.post('/actividades/:id/cancelar', async (req) => {
     const s = sesionDe(req);
     const { id } = pId.parse(req.params);
@@ -262,6 +299,9 @@ export async function rutasActividades(app: FastifyInstance, deps: Dependencias)
     exigir(s, 'actividades', 'eliminar', objetivoActividad(a), 'No tenés permiso para cancelar esta actividad');
     if (a.cancelada_en) throw validacion('La actividad ya está cancelada');
     await deps.db.updateTable('actividades').set({ cancelada_en: deps.ahora(), actualizado_en: deps.ahora() }).where('id', '=', a.id).execute();
+    if (await tieneAvisos(deps.db, a.id)) {
+      await avisarCancelacion(deps, a).catch((e) => notificarError(deps, e, 'aviso de cancelación').catch(() => {}));
+    }
     return { ok: true };
   });
 

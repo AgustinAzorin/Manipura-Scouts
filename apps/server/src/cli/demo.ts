@@ -5,7 +5,7 @@
  * dos actividades (una reunión pasada con asistencia y un campamento próximo).
  * Se puede correr más de una vez: si el grupo de demostración ya existe, no hace nada.
  */
-import { calcularEdad, hoyAR, instanteAR, sumarDias } from '@scouttracker/shared';
+import { calcularEdad, hoyAR, instanteAR, momentoAviso, sumarDias } from '@scouttracker/shared';
 import { cargarArchivoEnv } from '../config';
 import { crearDb, json } from '../db';
 import { migrar } from '../migrar';
@@ -142,7 +142,13 @@ const reunion = await actividad('Reunión de sábado', 'Reunión de sábado', in
 for (const [i, f] of fichas.entries()) {
   if (i % 5 !== 4) await db.updateTable('inscripciones').set({ presente: true, presente_en: new Date() }).where('actividad_id', '=', reunion).where('ficha_id', '=', f).execute();
 }
-const campamento = await actividad('Campamento', 'Campamento de primavera', instanteAR(sumarDias(hoy, 21), '09:00'), instanteAR(sumarDias(hoy, 23), '17:00'), 'Sierra de la Ventana');
+const inicioCampamento = instanteAR(sumarDias(hoy, 21), '09:00');
+const campamento = await actividad('Campamento', 'Campamento de primavera', inicioCampamento, instanteAR(sumarDias(hoy, 23), '17:00'), 'Sierra de la Ventana');
+// Avisos 1 semana y 1 día antes (RF-078).
+await db
+  .insertInto('avisos_actividad')
+  .values((['1w', '1d'] as const).map((antelacion) => ({ grupo_id: grupoId, actividad_id: campamento, antelacion, enviar_en: momentoAviso(inicioCampamento, antelacion) })))
+  .execute();
 for (const [i, f] of fichas.entries()) {
   const confirmacion = i < 18 ? 'va' : i < 24 ? 'noVa' : 'sinRespuesta';
   const autorizada = i < 16;
@@ -160,6 +166,10 @@ const educador = await usuario('Educador Demo', 'educador@demo.ar');
 await db.insertInto('asignaciones').values({ usuario_id: educador, grupo_id: grupoId, rol_id: roles['Educador']!, alcance: 'rama', rama_id: caminantes, equipo_id: null }).execute();
 const lector = await usuario('Lector Demo', 'lector@demo.ar');
 await db.insertInto('asignaciones').values({ usuario_id: lector, grupo_id: grupoId, rol_id: roles['Solo lectura']!, alcance: 'equipo', rama_id: caminantes, equipo_id: equipos[0]! }).execute();
+
+// Un feriado propio del grupo y un recordatorio personal del educador, para ver el calendario (RF-076, RF-077).
+await db.insertInto('feriados').values({ grupo_id: grupoId, fecha: sumarDias(hoy, 10), nombre: 'Aniversario del grupo' }).execute();
+await db.insertInto('recordatorios').values({ usuario_id: educador, grupo_id: grupoId, fecha: sumarDias(hoy, 3), hora: '19:00', titulo: 'Llamar a la sede por las carpas' }).execute();
 
 console.log(`Listo: "${NOMBRE_GRUPO}" con 30 fichas ficticias en Caminantes, una reunión pasada y un campamento próximo.
 Usuarios (contraseña: ${PASSWORD}):

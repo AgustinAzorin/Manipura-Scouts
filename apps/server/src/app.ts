@@ -9,11 +9,14 @@ import type { Db } from './db';
 import { ErrorHttp, noAutenticado } from './errores';
 import { cargarAsignaciones, type Sesion } from './servicios/acceso';
 import type { Almacenamiento } from './servicios/almacenamiento';
+import type { FuenteFeriados } from './servicios/feriados';
+import type { TransportePush } from './servicios/push';
 import { notificarError } from './servicios/monitoreo';
 import { Mailer } from './servicios/mailer';
 import { hashToken } from './servicios/seguridad';
 import { rutasActividades } from './rutas/actividades';
 import { rutasAdminGrupo } from './rutas/admin-grupo';
+import { rutasCalendario } from './rutas/calendario';
 import { rutasAdminRama } from './rutas/admin-rama';
 import { rutasArchivos } from './rutas/archivos';
 import { rutasAuth } from './rutas/auth';
@@ -26,6 +29,10 @@ export interface Dependencias {
   db: Db;
   mailer: Mailer;
   almacenamiento: Almacenamiento;
+  /** RF-080: notificaciones push. */
+  push: TransportePush;
+  /** RF-075: feriados nacionales. */
+  feriados: FuenteFeriados;
   config: Config;
   /** Reloj inyectable para probar vencimientos. */
   ahora: () => Date;
@@ -115,6 +122,7 @@ export async function construirApp(deps: Dependencias): Promise<FastifyInstance>
   await app.register(async (r) => rutasImportacion(r, deps));
   await app.register(async (r) => rutasArchivos(r, deps));
   await app.register(async (r) => rutasActividades(r, deps));
+  await app.register(async (r) => rutasCalendario(r, deps));
 
   return app;
 }

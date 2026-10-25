@@ -8,6 +8,7 @@ import {
   formatearFechaHora,
   formatearRango,
   hoyAR,
+  NOMBRE_ANTELACION,
   NOMBRE_CONFIRMACION,
   tienePermiso,
   totalesActividad,
@@ -120,6 +121,7 @@ export default function VistaActividad() {
           </View>
           <Text style={e.detalle}>{formatearRango(actividad.inicio, actividad.fin)}</Text>
           {actividad.lugar ? <Text style={e.detalle}>{actividad.lugar}</Text> : null}
+          {actividad.avisos.length ? <Text style={e.detalle}>Avisos: {actividad.avisos.map((a) => NOMBRE_ANTELACION[a].toLowerCase()).join(' y ')}</Text> : null}
         </View>
 
         {cancelada ? <Aviso tipo="error">Actividad cancelada.</Aviso> : null}

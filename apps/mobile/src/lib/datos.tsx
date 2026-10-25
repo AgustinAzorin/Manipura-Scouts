@@ -66,9 +66,19 @@ export function vencido(snapshot: SnapshotRama, ahora = Date.now()): boolean {
   return ahora - new Date(snapshot.generadoEn).getTime() > DIAS_MAXIMOS_SIN_SINCRONIZAR * 24 * 60 * 60 * 1000;
 }
 
-/** Los datos guardados por una versión anterior de la app no traen actividades. */
+/** Los datos guardados por una versión anterior de la app no traen actividades, calendario ni avisos. */
 const completar = (s: SnapshotRama | null): SnapshotRama | null =>
-  s ? { ...s, tiposActividad: s.tiposActividad ?? [], actividades: s.actividades ?? [], asistenciaAnio: s.asistenciaAnio ?? {} } : null;
+  s
+    ? {
+        ...s,
+        tiposActividad: s.tiposActividad ?? [],
+        actividades: (s.actividades ?? []).map((a) => ({ ...a, avisos: a.avisos ?? [], destinoAvisos: a.destinoAvisos ?? { tipo: 'alcance' } })),
+        asistenciaAnio: s.asistenciaAnio ?? {},
+        feriados: s.feriados ?? [],
+        recordatorios: s.recordatorios ?? [],
+        roles: s.roles ?? [],
+      }
+    : null;
 
 let secuencia = 0;
 const idRegistro = () => `${Date.now().toString(36)}-${(++secuencia).toString(36)}-${Math.random().toString(36).slice(2, 8)}`;

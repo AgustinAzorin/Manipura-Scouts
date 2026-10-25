@@ -1,4 +1,5 @@
 import {
+  ANTELACIONES,
   CODIGOS_ERROR,
   compararNombres,
   hoyAR,
@@ -138,6 +139,7 @@ export async function serializarActividades(
   if (op.ramaId) q = q.where('f.rama_id', '=', op.ramaId);
   if (op.soloVigentes) q = q.where('f.estado', 'in', ['activa', 'incompleta']);
   const inscripciones = await q.execute();
+  const avisos = await db.selectFrom('avisos_actividad').select(['actividad_id', 'antelacion']).where('actividad_id', 'in', filas.map((a) => a.id)).execute();
 
   const porActividad = new Map<string, InscripcionDTO[]>();
   for (const i of inscripciones) {
@@ -173,6 +175,8 @@ export async function serializarActividades(
     ramaId: a.rama_id,
     equipoId: a.equipo_id,
     canceladaEn: a.cancelada_en?.toISOString() ?? null,
+    avisos: ANTELACIONES.filter((x) => avisos.some((av) => av.actividad_id === a.id && av.antelacion === x)),
+    destinoAvisos: a.destino_avisos,
     inscripciones: (porActividad.get(a.id) ?? []).sort(compararNombres),
   }));
 }

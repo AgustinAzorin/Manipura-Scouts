@@ -5,7 +5,9 @@ import type { Config } from '../src/config';
 import { crearDb, type Db } from '../src/db';
 import { migrar } from '../src/migrar';
 import { AlmacenamientoMemoria } from '../src/servicios/almacenamiento';
+import { FuenteFeriadosMemoria } from '../src/servicios/feriados';
 import { Mailer, TransporteMemoria } from '../src/servicios/mailer';
+import { TransportePushMemoria } from '../src/servicios/push';
 import { hashearPassword } from '../src/servicios/seguridad';
 
 export const URL_DB_PRUEBA = process.env.TEST_DATABASE_URL ?? 'postgres://scout:scout@localhost:5432/scouttracker_test';
@@ -16,6 +18,8 @@ export interface Entorno {
   deps: Dependencias;
   mails: TransporteMemoria;
   almacenamiento: AlmacenamientoMemoria;
+  push: TransportePushMemoria;
+  feriados: FuenteFeriadosMemoria;
   reloj: { ahora: Date };
   cerrar(): Promise<void>;
 }
@@ -40,7 +44,9 @@ export async function crearEntorno(): Promise<Entorno> {
     mailResponsableTecnico: 'agustin@scout.test',
     origenesCors: [],
   };
-  const deps: Dependencias = { db, config, mailer: new Mailer(db, mails, () => reloj.ahora), almacenamiento, ahora: () => reloj.ahora };
+  const push = new TransportePushMemoria();
+  const feriados = new FuenteFeriadosMemoria();
+  const deps: Dependencias = { db, config, mailer: new Mailer(db, mails, () => reloj.ahora), almacenamiento, push, feriados, ahora: () => reloj.ahora };
   const app = await construirApp(deps);
   return {
     app,
@@ -48,6 +54,8 @@ export async function crearEntorno(): Promise<Entorno> {
     deps,
     mails,
     almacenamiento,
+    push,
+    feriados,
     reloj,
     async cerrar() {
       await app.close();

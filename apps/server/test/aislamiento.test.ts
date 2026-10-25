@@ -31,7 +31,11 @@ beforeAll(async () => {
     await esc.admin.post('/actividades', { grupoId: esc.grupoId, tipoId: campamento, nombre: 'Campamento', inicio: '2026-11-14T12:00:00Z', fin: '2026-11-16T19:00:00Z', alcance: 'rama', ramaId: esc.caminantes })
   ).json().id;
   await esc.admin.subir(`/actividades/${actividad}/inscripciones/${f.id}/autorizacion/archivo`, 'a.pdf', Buffer.from('%PDF-1.4\n%%EOF'), 'application/pdf');
+  const feriado = (await esc.admin.post(`/grupos/${esc.grupoId}/feriados`, { fecha: '2026-11-20', nombre: 'Feriado del grupo' })).json().id;
+  const recordatorio = (await esc.admin.post('/recordatorios', { grupoId: esc.grupoId, fecha: '2026-11-02', titulo: 'Privado' })).json().id;
   ids = {
+    feriado,
+    recordatorio,
     grupo: esc.grupoId,
     rama: esc.caminantes,
     ficha: f.id,
@@ -96,6 +100,14 @@ const rutas = (): [string, string, unknown?][] => [
   ['PUT', `/actividades/${ids.actividad}/inscripciones`, { quitar: [ids.ficha] }],
   ['GET', `/actividades/${ids.actividad}/inscripciones/${ids.ficha}/autorizacion/enlace`],
   ['DELETE', `/actividades/${ids.actividad}/inscripciones/${ids.ficha}/autorizacion/archivo`],
+  ['GET', `/grupos/${ids.grupo}/feriados?anio=2026`],
+  ['POST', `/grupos/${ids.grupo}/feriados`, { fecha: '2026-12-01', nombre: 'Intruso' }],
+  ['DELETE', `/feriados/${ids.feriado}`],
+  ['GET', `/recordatorios?grupoId=${ids.grupo}&desde=2026-01-01&hasta=2026-12-31`],
+  ['POST', '/recordatorios', { grupoId: ids.grupo, fecha: '2026-11-03', titulo: 'Intruso' }],
+  ['DELETE', `/recordatorios/${ids.recordatorio}`],
+  ['POST', `/grupos/${ids.grupo}/avisos`, { titulo: 'X', texto: 'X', destino: { tipo: 'grupo' }, canales: ['push'] }],
+  ['GET', `/grupos/${ids.grupo}/avisos`],
 ];
 
 describe('RNF-011 aislamiento entre grupos', () => {
