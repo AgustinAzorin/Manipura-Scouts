@@ -1,8 +1,9 @@
 # ScoutTracker
 
 App móvil (Android e iOS) para el padrón, las actividades y la documentación de ramas scout.
-Este repositorio implementa la **Parte 1 — Base** del SRS v1.4: grupos, ramas, equipos, usuarios,
-roles, padrón, importación y consulta sin conexión.
+Este repositorio implementa la **Parte 1 — Base** del SRS v1.4 (grupos, ramas, equipos, usuarios,
+roles, padrón, importación y consulta sin conexión) y, de la **Parte 2**, las actividades, la
+asistencia y las autorizaciones con registro sin conexión (RF-057 a RF-071, salvo RF-068).
 
 ## Estructura
 
@@ -96,6 +97,36 @@ anterior en cada push (RNF-033).
 | RNF-027 a RNF-029 | app `ui/tema.ts`, `ui/componentes.tsx` | `apps/mobile/test/contraste.test.ts` |
 | RNF-034 (servidor) | `servicios/monitoreo.ts` | `privacidad.test.ts` |
 
+## Trazabilidad de la Parte 2 (actividades)
+
+| Requisitos | Dónde | Pruebas |
+|---|---|---|
+| RF-057, RN-08 | `shared/actividades.ts` (`prevaleceRegistro`, `encolarRegistro`), `servicios/actividades.ts` (`aplicarRegistros`), app `lib/datos.tsx` | `actividades.test.ts` (shared y server), recorrido en navegador |
+| RF-058, RF-059, RF-066, RN-17 | `rutas/actividades.ts`, app `actividad/[id]/index.tsx`, `actividad/[id]/autorizacion.tsx` | `actividades.test.ts` |
+| RF-060 a RF-062, RF-064 | `rutas/actividades.ts`, app `actividad/nueva.tsx`, `ui/formulario-actividad.tsx`, `actividad/[id]/inscriptos.tsx` | `actividades.test.ts` |
+| RF-063 | `rutas/actividades.ts`, `servicios/grupos.ts`, app `admin/grupo/[grupoId]/tipos-actividad.tsx` | `actividades.test.ts`, `contraste.test.ts` |
+| RF-065, RF-067 | `shared/actividades.ts` (`confirmacionesProximas`), `shared/nomina.ts` | `actividades.test.ts`, `nomina.test.ts` |
+| RF-069, RF-070 | `servicios/actividades.ts` (`asistenciaDelAnio`), app `actividad/[id]/reporte.tsx`, `actividades-anteriores.tsx` | `actividades.test.ts` |
+| RF-071 | app `actividad/[id]/index.tsx`, `shared/actividades.ts` (`totalesActividad`) | `actividades.test.ts`, recorrido en navegador |
+| RN-19 | `shared/actividades.ts` (`asignacionVeActividad`) | `actividades.test.ts` |
+| RD-001, RNF-011 | todas las rutas nuevas | `aislamiento.test.ts` |
+
+Criterios tomados donde el SRS no decide:
+
+- **Conflictos (RN-08):** hay conflicto solo si el valor del servidor ya no es el que el celular veía
+  al registrar. Sin conflicto el registro se aplica, así un educador puede corregir su propia marca.
+  La hora del dispositivo no puede quedar en el futuro respecto del servidor.
+- **Autorizaciones:** son datos sensibles (glosario), así que su estado y su archivo solo se ven con
+  ese permiso y no se guardan en el celular de quien no lo tiene. Abrir el archivo queda auditado (RNF-044).
+- **"Sin autorización" (RF-071):** cuenta a los que van o están presentes; los que no van no la necesitan.
+- **Columna "Va" (RF-067):** muestra la confirmación de la próxima actividad de cada protagonista que
+  todavía no empezó, no la próxima de la rama: así una actividad de un equipo no deja en "—" al resto.
+- **Sin conexión (RF-054):** se guardan las actividades que terminaron hace hasta 60 días y las futuras.
+  Las anteriores se consultan con conexión.
+- **Alcance:** no se edita; para otro alcance se cancela la actividad y se crea otra. Al eliminarse un
+  equipo (RN-20), sus actividades pasan a la rama para conservar la asistencia.
+- **Confirmación (RF-065):** requiere conexión, porque RF-055 solo exceptúa asistencia y autorizaciones.
+
 ## Importación de la planilla
 
 Los encabezados se reconocen con una lista de nombres (`apps/server/src/importacion/mapeo.ts`) que
@@ -111,6 +142,7 @@ Criterios tomados donde el SRS no decide:
 
 ## Pendiente fuera de esta parte
 
-- Columna "Va", actividades, asistencia, autorizaciones de actividades y su sincronización (RF-057 a RF-071): Parte 2. La columna "Va" ya existe y muestra "—".
+- Resto de la Parte 2: calendario y avisos por push y mail (RF-072 a RF-087). Al editar o cancelar una actividad todavía no se reprograman ni se anulan avisos (RF-061, RF-062 y RF-085 lo piden cuando existan).
+- Asociar la Ficha de Actividad (RF-068): depende del generador de PDF de la Parte 3.
 - Alojamiento de producción (RES-01, RES-06): elegido DonWeb + Supabase (ver [docs/desplegar.md](docs/desplegar.md)), todavía sin desplegar. Los backups diarios están armados (RNF-005 a RNF-010); falta medir en producción cuánto tarda una restauración completa.
 - Aviso de errores de la app móvil (RNF-034 del lado del celular): requiere elegir un servicio de reporte de cierres.

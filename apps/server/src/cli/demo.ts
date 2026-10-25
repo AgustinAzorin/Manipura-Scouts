@@ -1,10 +1,11 @@
 /**
  * Carga datos FICTICIOS para probar la app (sección 4 del SRS: nunca datos reales en pruebas).
  * Uso: DATABASE_URL=... npm run demo -w @scouttracker/server
- * Crea un grupo de demostración con dos ramas, equipos, catálogos, 30 fichas y tres usuarios.
+ * Crea un grupo de demostración con dos ramas, equipos, catálogos, 30 fichas, tres usuarios y
+ * dos actividades (una reunión pasada con asistencia y un campamento próximo).
  * Se puede correr más de una vez: si el grupo de demostración ya existe, no hace nada.
  */
-import { calcularEdad, hoyAR, sumarDias } from '@scouttracker/shared';
+import { calcularEdad, hoyAR, instanteAR, sumarDias } from '@scouttracker/shared';
 import { cargarArchivoEnv } from '../config';
 import { crearDb, json } from '../db';
 import { migrar } from '../migrar';
@@ -80,6 +81,7 @@ const NOMBRES = ['Lucía', 'Mateo', 'Sofía', 'Benjamín', 'Valentina', 'Tomás'
 const hoy = hoyAR();
 const elegir = <T,>(lista: T[], i: number) => lista[i % lista.length]!;
 const cordis = new Set<string>();
+const fichas: string[] = [];
 
 for (let i = 0; i < 30; i++) {
   // Edades ficticias entre 15 y 19 años.
@@ -121,6 +123,35 @@ for (let i = 0; i < 30; i++) {
     .returning('id')
     .executeTakeFirstOrThrow();
   await db.insertInto('historial').values({ grupo_id: grupoId, ficha_id: ficha.id, usuario_id: null, campo: '_alta', valor_anterior: null, valor_nuevo: null, version: 1 }).execute();
+  fichas.push(ficha.id);
+}
+
+// Actividades: una reunión de hace una semana con asistencia y un campamento dentro de tres semanas
+// con confirmaciones y algunas autorizaciones, para probar la vista de control (RF-071).
+const tipos = Object.fromEntries((await db.selectFrom('tipos_actividad').select(['id', 'nombre']).where('grupo_id', '=', grupoId).execute()).map((t) => [t.nombre, t.id]));
+async function actividad(tipo: string, nombre: string, desde: string, hasta: string, lugar: string) {
+  const a = await db
+    .insertInto('actividades')
+    .values({ grupo_id: grupoId, tipo_id: tipos[tipo]!, nombre, inicio: desde, fin: hasta, lugar, alcance: 'rama', rama_id: caminantes, equipo_id: null })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  await db.insertInto('inscripciones').values(fichas.map((f) => ({ actividad_id: a.id, ficha_id: f, grupo_id: grupoId }))).execute();
+  return a.id;
+}
+const reunion = await actividad('Reunión de sábado', 'Reunión de sábado', instanteAR(sumarDias(hoy, -7), '14:00'), instanteAR(sumarDias(hoy, -7), '18:00'), 'Sede del grupo');
+for (const [i, f] of fichas.entries()) {
+  if (i % 5 !== 4) await db.updateTable('inscripciones').set({ presente: true, presente_en: new Date() }).where('actividad_id', '=', reunion).where('ficha_id', '=', f).execute();
+}
+const campamento = await actividad('Campamento', 'Campamento de primavera', instanteAR(sumarDias(hoy, 21), '09:00'), instanteAR(sumarDias(hoy, 23), '17:00'), 'Sierra de la Ventana');
+for (const [i, f] of fichas.entries()) {
+  const confirmacion = i < 18 ? 'va' : i < 24 ? 'noVa' : 'sinRespuesta';
+  const autorizada = i < 16;
+  await db
+    .updateTable('inscripciones')
+    .set({ confirmacion, confirmacion_en: new Date(), ...(autorizada ? { autorizacion: 'presentada', autorizacion_fecha: hoy, autorizacion_en: new Date() } : {}) })
+    .where('actividad_id', '=', campamento)
+    .where('ficha_id', '=', f)
+    .execute();
 }
 
 const admin = await usuario('Admin Demo', 'admin@demo.ar', true);
@@ -130,7 +161,7 @@ await db.insertInto('asignaciones').values({ usuario_id: educador, grupo_id: gru
 const lector = await usuario('Lector Demo', 'lector@demo.ar');
 await db.insertInto('asignaciones').values({ usuario_id: lector, grupo_id: grupoId, rol_id: roles['Solo lectura']!, alcance: 'equipo', rama_id: caminantes, equipo_id: equipos[0]! }).execute();
 
-console.log(`Listo: "${NOMBRE_GRUPO}" con 30 fichas ficticias en Caminantes.
+console.log(`Listo: "${NOMBRE_GRUPO}" con 30 fichas ficticias en Caminantes, una reunión pasada y un campamento próximo.
 Usuarios (contraseña: ${PASSWORD}):
   admin@demo.ar     admin de plataforma y del grupo
   educador@demo.ar  Educador en Caminantes (con datos sensibles)

@@ -218,6 +218,49 @@ export interface TablaErroresNotificados {
   cantidad: Generated<number>;
 }
 
+export interface TablaTiposActividad {
+  id: Generated<string>;
+  grupo_id: string;
+  nombre: string;
+  color: string;
+  requiere_autorizacion: Generated<boolean>;
+  activo: Generated<boolean>;
+  orden: Generated<number>;
+  creado_en: Creado;
+}
+
+export interface TablaActividades {
+  id: Generated<string>;
+  grupo_id: string;
+  tipo_id: string;
+  nombre: string;
+  inicio: Instante;
+  fin: Instante;
+  lugar: string | null;
+  alcance: 'grupo' | 'rama' | 'equipo';
+  rama_id: string | null;
+  equipo_id: string | null;
+  cancelada_en: Instante | null;
+  creado_por: string | null;
+  creado_en: Creado;
+  actualizado_en: Creado;
+}
+
+export interface TablaInscripciones {
+  actividad_id: string;
+  ficha_id: string;
+  grupo_id: string;
+  confirmacion: Generated<'sinRespuesta' | 'va' | 'noVa'>;
+  confirmacion_en: Instante | null;
+  presente: Generated<boolean>;
+  presente_en: Instante | null;
+  autorizacion: Generated<'noPresentada' | 'presentada'>;
+  autorizacion_fecha: string | null;
+  autorizacion_en: Instante | null;
+  autorizacion_archivo_id: string | null;
+  creado_en: Creado;
+}
+
 export interface BaseDeDatos {
   grupos: TablaGrupos;
   ramas: TablaRamas;
@@ -237,10 +280,14 @@ export interface BaseDeDatos {
   auditoria: TablaAuditoria;
   mails: TablaMails;
   errores_notificados: TablaErroresNotificados;
+  tipos_actividad: TablaTiposActividad;
+  actividades: TablaActividades;
+  inscripciones: TablaInscripciones;
 }
 
 export type Db = Kysely<BaseDeDatos>;
 export type FilaFicha = Selectable<TablaFichas>;
+export type FilaActividad = Selectable<TablaActividades>;
 export type FilaRol = Selectable<TablaRoles>;
 
 /**

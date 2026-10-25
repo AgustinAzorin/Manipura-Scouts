@@ -1,4 +1,5 @@
 /** Tipos de las respuestas de la API compartidos entre el servidor y la app. */
+import type { ActividadDTO, AsistenciaAnio, TipoActividadDTO } from './actividades';
 import type { FechaISO } from './fechas';
 import type {
   CampoFicha,
@@ -141,6 +142,12 @@ export interface SnapshotRama {
   contexto: Contexto;
   rama: RamaConfigDTO;
   fichas: FichaDTO[];
+  /** Tipos de actividad del grupo (RF-063). */
+  tiposActividad: TipoActividadDTO[];
+  /** Actividades de la rama recientes y futuras, con los inscriptos de la rama (RF-054, RF-071). */
+  actividades: ActividadDTO[];
+  /** RF-069: asistencia del año calendario por ficha. */
+  asistenciaAnio: Record<string, AsistenciaAnio>;
 }
 
 export interface CambioHistorialDTO {

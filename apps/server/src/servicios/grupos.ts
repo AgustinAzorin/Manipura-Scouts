@@ -1,4 +1,4 @@
-import { TODOS_LOS_PERMISOS, type Permisos } from '@scouttracker/shared';
+import { TIPOS_ACTIVIDAD_INICIALES, TODOS_LOS_PERMISOS, type Permisos } from '@scouttracker/shared';
 import { json, type Db } from '../db';
 
 export const ROL_ADMIN_GRUPO = 'adminGrupo';
@@ -43,7 +43,7 @@ const ROLES_INICIALES: { nombre: string; permisos: Permisos; verSensibles: boole
   },
 ];
 
-/** RF-001: crea un grupo activo, sin usuarios ni fichas, con sus roles iniciales. */
+/** RF-001: crea un grupo activo, sin usuarios ni fichas, con sus roles y tipos de actividad iniciales (RF-063). */
 export async function crearGrupo(db: Db, nombre: string): Promise<string> {
   return db.transaction().execute(async (trx) => {
     const g = await trx.insertInto('grupos').values({ nombre }).returning('id').executeTakeFirstOrThrow();
@@ -56,6 +56,18 @@ export async function crearGrupo(db: Db, nombre: string): Promise<string> {
           permisos: json(r.permisos),
           ver_sensibles: r.verSensibles,
           sistema: r.sistema,
+        })),
+      )
+      .execute();
+    await trx
+      .insertInto('tipos_actividad')
+      .values(
+        TIPOS_ACTIVIDAD_INICIALES.map((t, orden) => ({
+          grupo_id: g.id,
+          nombre: t.nombre,
+          color: t.color,
+          requiere_autorizacion: t.requiereAutorizacion,
+          orden,
         })),
       )
       .execute();

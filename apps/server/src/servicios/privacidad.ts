@@ -6,13 +6,20 @@ import { auditar } from './auditoria';
 /** RN-12 */
 export const ANIOS_HASTA_ANONIMIZAR = 2;
 
-/** Borra los archivos de una ficha del almacenamiento y de la base. */
+/** Borra los archivos de una ficha (documentos y autorizaciones de actividades) del almacenamiento y de la base. */
 async function borrarArchivosDeFicha(deps: Dependencias, fichaId: string): Promise<number> {
   const archivos = await deps.db
     .selectFrom('documentos as d')
     .innerJoin('archivos as a', 'a.id', 'd.archivo_id')
     .select(['a.id', 'a.clave'])
     .where('d.ficha_id', '=', fichaId)
+    .union(
+      deps.db
+        .selectFrom('inscripciones as i')
+        .innerJoin('archivos as a', 'a.id', 'i.autorizacion_archivo_id')
+        .select(['a.id', 'a.clave'])
+        .where('i.ficha_id', '=', fichaId),
+    )
     .execute();
   for (const a of archivos) await deps.almacenamiento.borrar(a.clave);
   if (archivos.length > 0) await deps.db.deleteFrom('archivos').where('id', 'in', archivos.map((a) => a.id)).execute();
@@ -46,7 +53,8 @@ const CAMPOS_HISTORIAL_PERSONALES = [
 
 /**
  * RF-117 / RN-12: anonimiza las fichas archivadas hace 2 años o más. Conserva rama, año de
- * nacimiento, equipo, etapa, promesa, elemento y estado de TADA; borra el resto y los archivos.
+ * nacimiento, equipo, etapa, promesa, elemento, estado de TADA y asistencia; borra el resto,
+ * los archivos y las autorizaciones de actividades.
  */
 export async function anonimizarVencidas(deps: Dependencias): Promise<number> {
   const ahora = deps.ahora();
@@ -63,6 +71,11 @@ export async function anonimizarVencidas(deps: Dependencias): Promise<number> {
     await borrarArchivosDeFicha(deps, f.id);
     await deps.db.transaction().execute(async (trx) => {
       await trx.deleteFrom('documentos').where('ficha_id', '=', f.id).execute();
+      await trx
+        .updateTable('inscripciones')
+        .set({ autorizacion: 'noPresentada', autorizacion_fecha: null, autorizacion_en: null, autorizacion_archivo_id: null })
+        .where('ficha_id', '=', f.id)
+        .execute();
       await trx
         .deleteFrom('historial')
         .where('ficha_id', '=', f.id)

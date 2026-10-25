@@ -156,6 +156,24 @@ La primera compilación tarda varios minutos. Se instala **ScoutTracker Dev**; e
 | Cerrar sesión | Desde el menú: los datos guardados se borran del celular. | RF-013 |
 | Importación | Como admin, en Administración → Rama → Importar planilla, elegí un CSV o XLSX guardado en el celular. Usá datos ficticios. | RF-049 a RF-053 |
 
+## Qué probar (Parte 2: actividades)
+
+`npm run demo` crea una reunión de la semana pasada (con asistencia) y un campamento dentro de tres
+semanas con 18 confirmados y 2 de ellos sin autorización.
+
+| Qué | Cómo | Requisito |
+|---|---|---|
+| Columna "Va" | En la nómina, la columna Va muestra Va / No va / Sin respuesta para el campamento. | RF-067 |
+| Vista de control | Menú → Actividades → el campamento: totales 18 van y 2 sin autorización. | RF-071 |
+| Escenario de campamento | Con datos sincronizados, poné dos celulares en modo avión, marcá presentes y autorizaciones en los dos (a uno de los mismos chicos "Presente" en uno y nada en el otro), cerrá la app y sacá el modo avión: todo llega al servidor sin tocar nada y queda "Presente". | RF-057 a RF-059, RN-08 |
+| Presente sin autorización | Marcá presente a alguien sin autorización: aparece el aviso, el presente queda y la fila se señala. | RF-066 |
+| Confirmación sin señal | En modo avión, tocá "Va" de alguien: la app avisa que requiere conexión. | RF-055 |
+| Asistencia de 25 | Cronometrá a alguien que nunca usó la app marcando la asistencia de 25 (meta: 3 min). | RNF-031 |
+| Crear y cancelar | Creá una actividad con fin anterior al inicio (se rechaza), después una válida; cancelala: queda visible como cancelada. | RF-060 a RF-062 |
+| Tipos de actividad | Como admin: Administración → Tipos de actividad. Un tipo sin "Requiere autorización" no muestra esa columna. | RF-063 |
+| Porcentaje de asistencia | Abrí una ficha: muestra la asistencia del año. | RF-069 |
+| Reporte | En una actividad, "Reporte de asistencia"; en Actividades anteriores, las de otros años. | RF-070 |
+
 ## Problemas comunes
 
 - **"No responde un servidor de ScoutTracker en esa dirección"**: el servidor no está andando, el túnel se cerró, la IP cambió, o el firewall bloquea el puerto 3000. Probá abrir `https://…/salud` en el navegador del celular: tiene que mostrar `{"ok":true}`.
