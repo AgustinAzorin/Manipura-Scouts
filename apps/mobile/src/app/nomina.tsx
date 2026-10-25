@@ -14,12 +14,15 @@ import {
   tienePermiso,
   type FiltrosNomina,
 } from '@scouttracker/shared';
+import { mensajeDeError } from '../lib/api';
 import { useDatos } from '../lib/datos';
 import { useAnexosPendientes } from '../lib/fichaActividad';
+import { exportarNomina } from '../lib/exportacion';
 import { Logo } from '../lib/logos';
 import { usePreferenciasNomina } from '../lib/preferencias';
 import { useSesion } from '../lib/sesion';
-import { Aviso, Boton, Campo, Cargando, Interruptor, Pantalla, Parrafo, Selector, Subtitulo } from '../ui/componentes';
+import { avisar, Aviso, Boton, Campo, Cargando, confirmar, Interruptor, Pantalla, Parrafo, Selector, Subtitulo } from '../ui/componentes';
+import { BotonMenu } from '../ui/encabezado';
 import { TablaNomina } from '../ui/tabla';
 import { colores, espacio, TACTIL_MINIMO, texto } from '../ui/tema';
 
@@ -33,6 +36,7 @@ export default function Nomina() {
   const { anexos } = useAnexosPendientes();
   const [busqueda, setBusqueda] = useState('');
   const [modal, setModal] = useState<'filtros' | 'columnas' | null>(null);
+  const [exportando, setExportando] = useState(false);
   const equipoId = params.equipo ?? null;
   const hoy = hoyAR();
 
@@ -80,14 +84,42 @@ export default function Nomina() {
   const equipos = snapshot.rama.equipos.filter((e) => !contexto.soloEquipos || contexto.soloEquipos.includes(e.id));
   const equipoActual = equipoId ? snapshot.rama.equipos.find((e) => e.id === equipoId) : null;
   const puedeCrear = tienePermiso(contexto.permisos, 'padron', 'crear');
+  const verGraficos = tienePermiso(contexto.permisos, 'graficos', 'ver');
+  const puedeExportar = tienePermiso(contexto.permisos, 'exportacion', 'ver');
   const cantidadFiltros = contarFiltros(prefs.filtros);
+
+  // RF-115: la nómina con los filtros, la vista por equipo y el orden de la lista.
+  const exportar = async () => {
+    if (busqueda.trim()) {
+      const n = armarNomina(snapshot.fichas, indice, { filtros: prefs.filtros, equipoId, hoy }).length;
+      const seguir = await confirmar(
+        'Exportar a Excel',
+        `La búsqueda por texto no se aplica a la exportación: se exportan ${n === 1 ? 'la ficha que cumple' : `las ${n} fichas que cumplen`} los filtros${equipoActual ? ` del equipo ${equipoActual.nombre}` : ''}.`,
+        'Exportar',
+      );
+      if (!seguir) return;
+    }
+    setExportando(true);
+    try {
+      await exportarNomina({
+        ramaId: snapshot.rama.id,
+        ramaNombre: snapshot.rama.nombre,
+        filtros: prefs.filtros,
+        equipo: equipoActual ? { id: equipoActual.id, nombre: equipoActual.nombre } : null,
+        orden: prefs.orden,
+      });
+    } catch (err) {
+      avisar('No se pudo exportar', mensajeDeError(err));
+    } finally {
+      setExportando(false);
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colores.fondo }} edges={['bottom', 'left', 'right']}>
       <Stack.Screen
         options={{
           title: equipoActual ? `Equipo ${equipoActual.nombre}` : contexto.ramaNombre,
-          headerBackVisible: !!equipoActual,
           headerRight: () => <BotonMenu />,
         }}
       />
@@ -120,6 +152,17 @@ export default function Nomina() {
           <Boton titulo="Columnas" variante="secundario" onPress={() => setModal('columnas')} estilo={{ flex: 1 }} />
           {puedeCrear ? <Boton titulo="+ Nueva" onPress={() => router.push('/ficha/nueva')} estilo={{ flex: 1 }} deshabilitado={sinConexion} /> : null}
         </View>
+        {verGraficos || puedeExportar ? (
+          <View style={e.acciones}>
+            {/* RF-112: los gráficos con los mismos filtros y la misma vista por equipo. */}
+            {verGraficos ? (
+              <Boton titulo="Gráficos" variante="secundario" onPress={() => router.push({ pathname: '/graficos', params: { nomina: '1', ...(equipoId ? { equipo: equipoId } : {}) } })} estilo={{ flex: 1 }} />
+            ) : null}
+            {puedeExportar ? (
+              <Boton titulo="Exportar a Excel" variante="secundario" onPress={exportar} cargando={exportando} deshabilitado={sinConexion} estilo={{ flex: 1 }} />
+            ) : null}
+          </View>
+        ) : null}
         {/* RF-034: vista por equipo. */}
         {equipos.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espacio.s }}>
@@ -172,15 +215,6 @@ function contarFiltros(f: FiltrosNomina): number {
     (f.edadDesde != null || f.edadHasta != null ? 1 : 0) +
     Object.values(f.propios ?? {}).filter((v) => v.length).length +
     (f.soloIncompletas ? 1 : 0)
-  );
-}
-
-function BotonMenu() {
-  const router = useRouter();
-  return (
-    <Pressable onPress={() => router.push('/menu')} accessibilityRole="button" accessibilityLabel="Menú" style={{ minHeight: TACTIL_MINIMO, minWidth: TACTIL_MINIMO, justifyContent: 'center', paddingHorizontal: espacio.s }}>
-      <Text style={{ color: colores.primarioTexto, fontSize: texto.normal, fontWeight: '700' }}>Menú</Text>
-    </Pressable>
   );
 }
 

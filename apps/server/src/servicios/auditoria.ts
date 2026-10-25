@@ -1,7 +1,7 @@
 import type { Db } from '../db';
 import { json } from '../db';
 
-export type AccionAuditada = 'apertura_documento' | 'supresion' | 'anonimizacion' | 'importacion';
+export type AccionAuditada = 'apertura_documento' | 'supresion' | 'anonimizacion' | 'importacion' | 'exportacion';
 
 /**
  * RNF-044 a RNF-046: registro de auditoría. Se refiere a la ficha solo por su id interno;

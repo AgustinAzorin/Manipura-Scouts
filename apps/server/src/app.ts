@@ -21,6 +21,7 @@ import { rutasAdminRama } from './rutas/admin-rama';
 import { rutasArchivos } from './rutas/archivos';
 import { rutasAuth } from './rutas/auth';
 import { rutasDocumentos } from './rutas/documentos';
+import { rutasExportacion } from './rutas/exportacion';
 import { rutasFichas } from './rutas/fichas';
 import { rutasFichasActividad } from './rutas/fichas-actividad';
 import { rutasImportacion } from './rutas/importacion';
@@ -125,6 +126,7 @@ export async function construirApp(deps: Dependencias): Promise<FastifyInstance>
   await app.register(async (r) => rutasActividades(r, deps));
   await app.register(async (r) => rutasCalendario(r, deps));
   await app.register(async (r) => rutasFichasActividad(r, deps));
+  await app.register(async (r) => rutasExportacion(r, deps));
 
   return app;
 }

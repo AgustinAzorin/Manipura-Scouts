@@ -266,6 +266,38 @@ export function filtrosAplicables(filtros: FiltrosNomina, rama: RamaConfigDTO): 
   return r;
 }
 
+/**
+ * Filtros en palabras ("Etapa: Descubrimiento"), para mostrar en los gráficos que vienen de la
+ * nómina (RF-112) y registrar en la exportación (RF-115, RNF-043). Solo lleva nombres de valores de
+ * catálogo, equipos y edades, nunca datos de un protagonista.
+ */
+export function describirFiltros(filtros: FiltrosNomina, ix: IndiceRama): string[] {
+  const f = filtrosAplicables(filtros, ix.rama);
+  const nombre = (id: string, sinValor = 'Sin dato') =>
+    id === SIN_VALOR ? sinValor : (ix.valores.get(id)?.nombre ?? ix.equipos.get(id)?.nombre ?? 'Valor eliminado');
+  const lista = (etiqueta: string, ids: string[] | undefined, sinValor?: string) =>
+    ids?.length ? [`${etiqueta}: ${ids.map((id) => nombre(id, sinValor)).join(', ')}`] : [];
+  const r = [
+    ...lista('Equipo', f.equipo, 'Sin equipo'),
+    ...lista('Elemento', f.elemento),
+    ...lista('Etapa', f.etapa),
+    ...lista('Promesa', f.promesa),
+    ...(f.tada?.length ? [`TADA: ${f.tada.map((t) => NOMBRE_ESTADO_TADA[t]).join(', ')}`] : []),
+  ];
+  const edad = (n: number) => String(n).replace('.', ',');
+  if (f.edadDesde != null && f.edadHasta != null) r.push(`Edad de ${edad(f.edadDesde)} a ${edad(f.edadHasta)}`);
+  else if (f.edadDesde != null) r.push(`Edad desde ${edad(f.edadDesde)}`);
+  else if (f.edadHasta != null) r.push(`Edad hasta ${edad(f.edadHasta)}`);
+  for (const [id, valores] of Object.entries(f.propios ?? {})) {
+    const def = ix.rama.camposPropios.find((c) => c.id === id);
+    if (!def || !valores.length) continue;
+    const texto = valores.map((v) => (v === SIN_VALOR ? 'Sin dato' : v === 'true' ? 'Sí' : v === 'false' ? 'No' : v));
+    r.push(`${def.nombre}: ${texto.join(', ')}`);
+  }
+  if (f.soloIncompletas) r.push('Solo fichas incompletas');
+  return r;
+}
+
 // ---------------------------------------------------------------------------
 // Búsqueda, orden y armado de la lista
 

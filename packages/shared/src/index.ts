@@ -7,3 +7,5 @@ export * from './nomina';
 export * from './actividades';
 export * from './calendario';
 export * from './fichaActividad';
+export * from './graficos';
+export * from './inicio';
