@@ -90,6 +90,7 @@ y los archivos (`deploy/backup.sh`, `deploy/restaurar.sh`). Equipos y catálogos
 ```bash
 npm run typecheck       # shared, server y mobile
 npm test                # unitarias + integración (necesita PostgreSQL)
+npm run cobertura       # lo mismo, con la cobertura de las reglas críticas (RNF-032)
 cd apps/mobile && npx expo lint
 ```
 
@@ -97,6 +98,12 @@ Las pruebas de integración usan `TEST_DATABASE_URL` (por defecto
 `postgres://scout:scout@localhost:5432/scouttracker_test`) y **borran esa base** en cada archivo.
 Usan solo datos ficticios (sección 4 del SRS). La CI (`.github/workflows/ci.yml`) corre todo lo
 anterior en cada push (RNF-033).
+
+**Cobertura (RNF-032):** `npm run cobertura` mide los archivos con las reglas críticas del SRS (edad y TADA,
+cuotas, permisos por rol y alcance, aislamiento entre grupos, conflictos sin conexión y totalización de
+materiales) y falla si alguno baja del 70% de sentencias, ramas, funciones o líneas. Los archivos están en
+`packages/shared/vitest.config.ts` y `apps/server/vitest.config.ts`. La CI lo corre en cada push y deja el
+reporte HTML como artefacto `cobertura`, que es lo que se inspecciona.
 
 ## Trazabilidad de la Parte 1
 
@@ -115,7 +122,7 @@ anterior en cada push (RNF-033).
 | RF-117, RF-118, RN-12, RNF-045, RNF-046 | `servicios/privacidad.ts`, `servicios/auditoria.ts` | `privacidad.test.ts` |
 | RD-001, RNF-011 | todas las rutas | `aislamiento.test.ts` |
 | RNF-027 a RNF-029 | app `ui/tema.ts`, `ui/componentes.tsx` | `apps/mobile/test/contraste.test.ts` |
-| RNF-034 (servidor) | `servicios/monitoreo.ts` | `privacidad.test.ts` |
+| RNF-034 | servidor: `servicios/monitoreo.ts`; app: `lib/errores.ts`, `ErrorBoundary` en `app/_layout.tsx`, `rutas/monitoreo.ts` | `privacidad.test.ts`, recorrido en navegador |
 
 ## Trazabilidad de la Parte 2 (actividades)
 
@@ -275,4 +282,11 @@ Criterios tomados donde el SRS no decide:
 - Medir RNF-004 (PDF de 10 páginas en 20 s) en el Moto G22 de referencia.
 - Probar en el celular el menú de compartir del Excel (RF-115): usa los mismos módulos que el PDF.
 - Alojamiento de producción (RES-01, RES-06): elegido DonWeb + Supabase (ver [docs/desplegar.md](docs/desplegar.md)), todavía sin desplegar. Los backups diarios están armados (RNF-005 a RNF-010); falta medir en producción cuánto tarda una restauración completa.
-- Aviso de errores de la app móvil (RNF-034 del lado del celular): requiere elegir un servicio de reporte de cierres.
+- Aviso de errores de la app (RNF-034): probado en la web; falta probar un cierre en el celular, que
+  necesita un APK nuevo. Los errores de la app se guardan en el dispositivo y se mandan al servidor con
+  sesión, que avisa por mail al responsable técnico (como los del servidor, una vez por error y hasta 10
+  mails por día, para no agotar el tope de RN-14).
+- iOS: Expo SDK 58 pide iOS 16.4 o superior, y RNF-036 dice iOS 16. Hay que corregir el SRS.
+- RES-06 / RNF-025: la base en Supabase queda en Brasil y se cubre con el DPA de Supabase, que hay que
+  presentar a la AAIP dentro de los 30 días de aceptar los términos (ver
+  [docs/desplegar.md](docs/desplegar.md#datos-fuera-de-argentina-ley-25326)).

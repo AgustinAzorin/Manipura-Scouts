@@ -2,7 +2,7 @@ import { sql } from 'kysely';
 import { hoyAR } from '@scouttracker/shared';
 import type { Db } from '../db';
 
-export type TipoMail = 'invitacion' | 'recuperacion' | 'aviso' | 'error';
+export type TipoMail = 'invitacion' | 'recuperacion' | 'aviso' | 'error' | 'error-app';
 
 export interface Mail {
   para: string;

@@ -30,7 +30,15 @@ jobs:
       - run: npm run typecheck
       - run: npx expo lint
         working-directory: apps/mobile
-      - run: npm test
+      # RNF-032: las pruebas corren con cobertura de las reglas críticas (piso del 70% por archivo).
+      - run: npm run cobertura
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cobertura
+          path: |
+            packages/shared/coverage
+            apps/server/coverage
 
   # La imagen de producción (deploy/docker-compose.yml) se arma, arranca y responde.
   imagen:
