@@ -123,6 +123,38 @@ describe('RNF-034 aviso de errores', () => {
     expect(avisos).toHaveLength(1);
     expect(avisos[0]!.para).toBe('agustin@scout.test');
   });
+
+  const reporte = (mensaje: string) => ({
+    mensaje,
+    pila: `TypeError: ${mensaje}\n    at Nomina (index.android.bundle:1:2345)`,
+    plataforma: 'android',
+    version: '0.1.0',
+    fatal: true,
+  });
+
+  it('avisa por mail los errores nuevos de la app, una vez cada uno', async () => {
+    expect((await esc.admin.post('/errores-app', reporte('x is undefined'))).statusCode).toBe(204);
+    expect((await esc.admin.post('/errores-app', reporte('x is undefined'))).statusCode).toBe(204);
+    const avisos = e.mails.enviados.filter((m) => m.tipo === 'error-app');
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]!.para).toBe('agustin@scout.test');
+    expect(avisos[0]!.asunto).toContain('Cierre nuevo en la app (android)');
+    expect(avisos[0]!.texto).toContain('index.android.bundle:1:2345');
+  });
+
+  it('sin sesión no acepta reportes', async () => {
+    const r = await e.app.inject({ method: 'POST', url: '/errores-app', payload: reporte('x is undefined') });
+    expect(r.statusCode).toBe(401);
+    expect(e.mails.enviados.filter((m) => m.tipo === 'error-app')).toHaveLength(0);
+  });
+
+  it('no manda más de 10 mails por día de errores de la app', async () => {
+    for (let i = 0; i < 12; i++) await esc.admin.post('/errores-app', reporte(`error ${i}`));
+    expect(e.mails.enviados.filter((m) => m.tipo === 'error-app')).toHaveLength(10);
+    // Los demás errores quedan registrados para verlos en la base.
+    const registrados = await e.db.selectFrom('errores_notificados').select('firma').execute();
+    expect(registrados).toHaveLength(12);
+  });
 });
 
 describe('RN-14 tope de mails', () => {

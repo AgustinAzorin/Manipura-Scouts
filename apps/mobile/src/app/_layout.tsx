@@ -1,16 +1,35 @@
-import { Stack, usePathname, useRouter } from 'expo-router';
+import { Stack, usePathname, useRouter, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { BloqueoProvider } from '../lib/bloqueo';
 import { DatosProvider } from '../lib/datos';
+import { enviarErroresPendientes, instalarCapturaDeErrores, registrarError } from '../lib/errores';
 import { useAvisos } from '../lib/notificaciones';
 import { SesionProvider, useSesion } from '../lib/sesion';
 import { BarraLateral } from '../ui/barra-lateral';
+import { Boton, Pantalla, Parrafo, Titulo } from '../ui/componentes';
 import { useEscritorio } from '../ui/escritorio';
 import { colores } from '../ui/tema';
 
 const RUTAS_PUBLICAS = ['/login', '/recuperar'];
+
+// RNF-034: los errores que nadie atrapa se guardan y se avisan al responsable técnico.
+instalarCapturaDeErrores();
+
+/** Una pantalla que falla al dibujarse no cierra la app: se avisa el error y se puede reintentar. */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    void registrarError(error, false);
+  }, [error]);
+  return (
+    <Pantalla angosta>
+      <Titulo>Algo salió mal</Titulo>
+      <Parrafo>Esta pantalla tuvo un error inesperado. Quedó registrado para el responsable técnico.</Parrafo>
+      <Boton titulo="Reintentar" onPress={() => void retry()} />
+    </Pantalla>
+  );
+}
 
 function Raiz() {
   const { estado } = useSesion();
@@ -18,7 +37,13 @@ function Raiz() {
   const router = useRouter();
   // En la web con pantalla ancha, el menú queda fijo a la izquierda.
   const conBarra = useEscritorio() && estado.tipo === 'conSesion' && !RUTAS_PUBLICAS.includes(ruta);
-  useAvisos(estado.tipo === 'conSesion' ? estado.token : null);
+  const token = estado.tipo === 'conSesion' ? estado.token : null;
+  useAvisos(token);
+
+  // Los errores guardados sin conexión o antes de iniciar sesión salen apenas hay sesión.
+  useEffect(() => {
+    if (token) void enviarErroresPendientes();
+  }, [token]);
 
   useEffect(() => {
     if (estado.tipo === 'sinSesion' && !RUTAS_PUBLICAS.includes(ruta)) router.replace('/login');

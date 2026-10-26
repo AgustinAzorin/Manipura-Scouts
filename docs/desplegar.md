@@ -7,7 +7,7 @@ Celulares  ──HTTPS──▶ Cloud Server de DonWeb (Rosario)          Supaba
 Navegadores           ├─ Caddy: HTTPS con certificado automático y la versión web
                      ├─ Servidor de ScoutTracker ──SSL──────▶  PostgreSQL (fichas, usuarios…)
                      ├─ Documentos y fotos (disco del servidor)
-                     └─ Backup diario cifrado ──▶ Google Drive (u otro destino de rclone)
+                     └─ Backup diario cifrado ──▶ otro almacenamiento (otro servidor por SFTP, Google Drive…)
 ```
 
 Vas a necesitar: el Cloud Server con **Ubuntu 24.04**, un **dominio**, una cuenta en **Supabase** y una
@@ -21,7 +21,8 @@ comentarios: no hace falta copiarlas.
 ## 1. Base de datos en Supabase
 
 1. Entrá a https://supabase.com, creá una organización (plan Free) y un proyecto nuevo:
-   - **Region:** South America (São Paulo).
+   - **Region:** South America (São Paulo). Es la más cercana, pero queda en Brasil: leé
+     [Datos fuera de Argentina](#datos-fuera-de-argentina-ley-25326) antes de cargar datos reales.
    - **Database password:** generá una larga y **guardala** (gestor de contraseñas). Evitá `@`, `/`, `:` y `?`: van dentro de una URL.
 2. **Apagá la API REST de Supabase** (la app no la usa y expone las tablas): *Project Settings → Data API* → desactivá *Enable Data API*.
    El servidor además activa RLS en todas las tablas al arrancar, así que aunque quede encendida no ve datos; apagarla es la segunda barrera.
@@ -81,7 +82,8 @@ nano .env
 ```
 
 Completá en `.env`: `DOMINIO`, `DOMINIO_WEB`, `URL_PUBLICA` (con `https://`), `DATABASE_URL` (paso 1.3), `SECRETO_ENLACES`
-y `MAIL_RESPONSABLE_TECNICO` (tu mail). `RESEND_API_KEY` puede quedar vacío por ahora. Guardá con Ctrl+O, Enter, Ctrl+X.
+y `MAIL_RESPONSABLE_TECNICO` (tu mail: ahí llegan los errores nuevos del servidor y de la app, RNF-034).
+`RESEND_API_KEY` puede quedar vacío por ahora. Guardá con Ctrl+O, Enter, Ctrl+X.
 
 Subí el certificado de Supabase **desde tu compu** (otra ventana de PowerShell, en la carpeta donde se bajó):
 
@@ -182,10 +184,29 @@ chmod 600 /root/.scouttracker-backup.clave
 cat /root/.scouttracker-backup.clave
 ```
 
-**Copia fuera del servidor (Google Drive):** `rclone config` → `n` (nuevo) → nombre `gdrive` → tipo `drive` →
-dejá *client_id* y *client_secret* vacíos → *scope* `1` → cuando pregunte por *auto config* respondé `n`
-y seguí las instrucciones (te pide correr `rclone authorize "drive"` en una compu con navegador y pegar el resultado).
-Después, en `deploy/.env`: `BACKUP_REMOTO=gdrive:scouttracker-backups`.
+**Copia fuera del servidor.** Los backups quedan 7 días en el disco del servidor, pero eso solo no
+alcanza: si el servidor se rompe, lo borran o lo hackean, se pierden junto con los datos. RNF-007 pide
+una copia diaria en otro almacenamiento, guardada 30 días o más. El backup se cifra antes de salir del
+servidor, así que el destino no puede leerlo. Elegí uno:
+
+- **Otro servidor en Argentina (recomendado):** el Cloud Server más chico de DonWeb, o cualquier otro
+  equipo con SSH en el país. Así nada sale de Argentina (RES-06). En ese servidor creá un usuario
+  `backups` (`adduser --disabled-password backups`). En el servidor de ScoutTracker:
+
+  ```bash
+  ssh-keygen -t ed25519 -f /root/.ssh/backups -N ''
+  cat /root/.ssh/backups.pub   # pegalo en /home/backups/.ssh/authorized_keys del otro servidor
+  rclone config create respaldo sftp host IP_DEL_OTRO_SERVIDOR user backups key_file /root/.ssh/backups
+  rclone mkdir respaldo:scouttracker-backups && rclone lsd respaldo:   # tiene que listar la carpeta
+  ```
+
+  Después, en `deploy/.env`: `BACKUP_REMOTO=respaldo:scouttracker-backups`.
+
+- **Google Drive:** `rclone config` → `n` (nuevo) → nombre `gdrive` → tipo `drive` → dejá *client_id* y
+  *client_secret* vacíos → *scope* `1` → cuando pregunte por *auto config* respondé `n` y seguí las
+  instrucciones (te pide correr `rclone authorize "drive"` en una compu con navegador y pegar el
+  resultado). Después, en `deploy/.env`: `BACKUP_REMOTO=gdrive:scouttracker-backups`. Los servidores de
+  Google están fuera del país (ver [Datos fuera de Argentina](#datos-fuera-de-argentina-ley-25326)).
 
 Probalo y programalo para todos los días a las 3:30:
 
@@ -194,8 +215,28 @@ Probalo y programalo para todos los días a las 3:30:
 echo '30 3 * * * root /srv/scouttracker/deploy/backup.sh >> /var/log/scouttracker-backup.log 2>&1' > /etc/cron.d/scouttracker-backup
 ```
 
-Quedan 7 días en el servidor (`/var/backups/scouttracker`) y 60 en Drive. El backup semanal de DonWeb copia además todo el servidor.
-Cada tanto mirá `tail /var/log/scouttracker-backup.log`: cada día tiene que decir `Backup listo`.
+Quedan 7 días en el servidor (`/var/backups/scouttracker`) y 60 en el otro almacenamiento. El backup semanal de DonWeb copia además todo el servidor.
+Cada tanto mirá `tail /var/log/scouttracker-backup.log`: cada día tiene que decir `Backup listo` y `Copiado a`.
+
+**Prueba de restauración cada 3 meses (RNF-010).** `probar-restauracion.sh` restaura un backup en una
+base temporal (un contenedor que se borra al terminar), sin tocar la de producción ni los archivos,
+y comprueba que cada archivo que figura en la base esté en el backup. Al menos una vez, probá con una
+copia bajada del otro almacenamiento, para confirmar que esa copia sirve:
+
+```bash
+rclone copy respaldo:scouttracker-backups/ARCHIVO /tmp/   # o gdrive:…
+/srv/scouttracker/deploy/probar-restauracion.sh /tmp/ARCHIVO
+```
+
+Para que se haga sola el día 1 de enero, abril, julio y octubre con el último backup:
+
+```bash
+echo '0 5 1 1,4,7,10 * root /srv/scouttracker/deploy/probar-restauracion.sh "$(ls -t /var/backups/scouttracker/scouttracker-*.tar.gpg | head -1)" >> /var/log/scouttracker-backup.log 2>&1' > /etc/cron.d/scouttracker-prueba-restauracion
+```
+
+Cada prueba deja una línea en `/var/log/scouttracker-restauracion.log` con el resultado, la cantidad de
+fichas y archivos y cuánto tardó: ese archivo es el registro que pide RNF-010. La duración de la prueba
+sirve de referencia para el tiempo de recuperación (RTO ≤ 24 h, RNF-009).
 
 **Restaurar** (reemplaza todos los datos actuales por los del backup; pide escribir RESTAURAR):
 
@@ -219,6 +260,7 @@ avisos llegan por mail.
 
 ## Actualizar a una versión nueva
 
+**Nunca un sábado de 9:00 a 20:00** (RNF-006): es cuando los educadores usan la app en las actividades.
 Antes, sacá un snapshot del Cloud Server desde el panel de DonWeb.
 
 ```bash
@@ -228,6 +270,20 @@ docker image prune -f      # borra imágenes viejas (el disco es de 20 GB)
 ```
 
 Las migraciones de la base se aplican solas al arrancar.
+
+## Datos fuera de Argentina (Ley 25.326)
+
+RES-06 pide que los datos estén en Argentina, o en un proveedor que cubra la transferencia
+internacional con cláusulas contractuales. Con esta guía:
+
+| Dónde | Qué guarda | Situación |
+|---|---|---|
+| Cloud Server de DonWeb (Rosario) | Documentos y fotos, backups de 7 días | En Argentina. |
+| Supabase (São Paulo, Brasil) | La base completa: fichas, datos sensibles, usuarios | **Fuera del país y sin cifrar para el proveedor.** Hace falta firmar el acuerdo de tratamiento de datos (DPA) de Supabase y que alguien con conocimiento legal confirme que cubre la Ley 25.326. |
+| Destino de los backups | Copia cifrada con una clave que el proveedor no tiene | Con otro servidor en Argentina, nada sale del país. Con Google Drive, salen datos cifrados: que esto alcance también es una consulta legal. |
+
+Hasta que se resuelva lo de Supabase, RNF-025 no está cumplido. Guardá el DPA firmado (o la
+respuesta legal) junto con esta guía: es la evidencia que pide RNF-025.
 
 ## Problemas comunes
 

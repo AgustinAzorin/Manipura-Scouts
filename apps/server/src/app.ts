@@ -25,6 +25,7 @@ import { rutasExportacion } from './rutas/exportacion';
 import { rutasFichas } from './rutas/fichas';
 import { rutasFichasActividad } from './rutas/fichas-actividad';
 import { rutasImportacion } from './rutas/importacion';
+import { rutasMonitoreo } from './rutas/monitoreo';
 import { rutasPlataforma } from './rutas/plataforma';
 
 export interface Dependencias {
@@ -127,6 +128,7 @@ export async function construirApp(deps: Dependencias): Promise<FastifyInstance>
   await app.register(async (r) => rutasCalendario(r, deps));
   await app.register(async (r) => rutasFichasActividad(r, deps));
   await app.register(async (r) => rutasExportacion(r, deps));
+  await app.register(async (r) => rutasMonitoreo(r, deps));
 
   return app;
 }

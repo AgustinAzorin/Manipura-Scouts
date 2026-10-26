@@ -236,3 +236,13 @@ export interface RamaDTO {
   nombre: string;
   comunidad: string | null;
 }
+
+/** RNF-034: error inesperado de la app que se manda al servidor (POST /errores-app). */
+export interface ReporteErrorApp {
+  mensaje: string;
+  pila?: string | undefined;
+  plataforma: 'android' | 'ios' | 'web';
+  version: string;
+  /** Cerró la app (o la pestaña quedó inutilizable). */
+  fatal: boolean;
+}
