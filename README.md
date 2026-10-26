@@ -287,5 +287,6 @@ Criterios tomados donde el SRS no decide:
   sesión, que avisa por mail al responsable técnico (como los del servidor, una vez por error y hasta 10
   mails por día, para no agotar el tope de RN-14).
 - iOS: Expo SDK 58 pide iOS 16.4 o superior, y RNF-036 dice iOS 16. Hay que corregir el SRS.
-- RES-06 / RNF-025: la base en Supabase queda en Brasil; falta el DPA y la consulta legal (ver
+- RES-06 / RNF-025: la base en Supabase queda en Brasil y se cubre con el DPA de Supabase, que hay que
+  presentar a la AAIP dentro de los 30 días de aceptar los términos (ver
   [docs/desplegar.md](docs/desplegar.md#datos-fuera-de-argentina-ley-25326)).

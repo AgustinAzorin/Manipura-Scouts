@@ -189,8 +189,15 @@ alcanza: si el servidor se rompe, lo borran o lo hackean, se pierden junto con l
 una copia diaria en otro almacenamiento, guardada 30 días o más. El backup se cifra antes de salir del
 servidor, así que el destino no puede leerlo. Elegí uno:
 
-- **Otro servidor en Argentina (recomendado):** el Cloud Server más chico de DonWeb, o cualquier otro
-  equipo con SSH en el país. Así nada sale de Argentina (RES-06). En ese servidor creá un usuario
+- **Google Drive (el elegido por ahora; gratis hasta 15 GB):** `rclone config` → `n` (nuevo) → nombre
+  `gdrive` → tipo `drive` → dejá *client_id* y *client_secret* vacíos → *scope* `1` → cuando pregunte por
+  *auto config* respondé `n` y seguí las instrucciones (te pide correr `rclone authorize "drive"` en una
+  compu con navegador y pegar el resultado). Después, en `deploy/.env`:
+  `BACKUP_REMOTO=gdrive:scouttracker-backups`. Los servidores de Google están fuera del país (ver
+  [Datos fuera de Argentina](#datos-fuera-de-argentina-ley-25326)).
+
+- **Otro servidor en Argentina:** el Cloud Server más chico de DonWeb, o cualquier otro equipo con
+  SSH en el país. Así nada sale de Argentina (RES-06), pero tiene costo. En ese servidor creá un usuario
   `backups` (`adduser --disabled-password backups`). En el servidor de ScoutTracker:
 
   ```bash
@@ -201,12 +208,6 @@ servidor, así que el destino no puede leerlo. Elegí uno:
   ```
 
   Después, en `deploy/.env`: `BACKUP_REMOTO=respaldo:scouttracker-backups`.
-
-- **Google Drive:** `rclone config` → `n` (nuevo) → nombre `gdrive` → tipo `drive` → dejá *client_id* y
-  *client_secret* vacíos → *scope* `1` → cuando pregunte por *auto config* respondé `n` y seguí las
-  instrucciones (te pide correr `rclone authorize "drive"` en una compu con navegador y pegar el
-  resultado). Después, en `deploy/.env`: `BACKUP_REMOTO=gdrive:scouttracker-backups`. Los servidores de
-  Google están fuera del país (ver [Datos fuera de Argentina](#datos-fuera-de-argentina-ley-25326)).
 
 Probalo y programalo para todos los días a las 3:30:
 
@@ -224,7 +225,7 @@ y comprueba que cada archivo que figura en la base esté en el backup. Al menos 
 copia bajada del otro almacenamiento, para confirmar que esa copia sirve:
 
 ```bash
-rclone copy respaldo:scouttracker-backups/ARCHIVO /tmp/   # o gdrive:…
+rclone copy gdrive:scouttracker-backups/ARCHIVO /tmp/
 /srv/scouttracker/deploy/probar-restauracion.sh /tmp/ARCHIVO
 ```
 
@@ -279,11 +280,30 @@ internacional con cláusulas contractuales. Con esta guía:
 | Dónde | Qué guarda | Situación |
 |---|---|---|
 | Cloud Server de DonWeb (Rosario) | Documentos y fotos, backups de 7 días | En Argentina. |
-| Supabase (São Paulo, Brasil) | La base completa: fichas, datos sensibles, usuarios | **Fuera del país y sin cifrar para el proveedor.** Hace falta firmar el acuerdo de tratamiento de datos (DPA) de Supabase y que alguien con conocimiento legal confirme que cubre la Ley 25.326. |
-| Destino de los backups | Copia cifrada con una clave que el proveedor no tiene | Con otro servidor en Argentina, nada sale del país. Con Google Drive, salen datos cifrados: que esto alcance también es una consulta legal. |
+| Supabase (São Paulo, Brasil) | La base completa: fichas, datos sensibles, usuarios | **Fuera del país y sin cifrar para el proveedor.** Se cubre con el DPA de Supabase (ver abajo). |
+| Google Drive | Copia de los backups, cifrada con una clave que Google no tiene | Fuera del país, pero Google no puede leerla. Si esto cuenta como transferencia es una consulta legal; el riesgo es mucho menor que el de la base. |
 
-Hasta que se resuelva lo de Supabase, RNF-025 no está cumplido. Guardá el DPA firmado (o la
-respuesta legal) junto con esta guía: es la evidencia que pide RNF-025.
+**Decisión por ahora: la base sigue en Supabase, cubierta por su DPA.** Lo que dice el DPA (versión
+del 1/8/2026, <https://supabase.com/legal/customer-resources/data-processing-addendum>):
+
+- La contraparte es Supabase Pte. Ltd. (Singapur). Supabase puede procesar datos donde tengan
+  instalaciones sus subprocesadores; elegir São Paulo asegura que se guarden y procesen *principalmente* ahí.
+- Usa las cláusulas contractuales tipo de la UE (Decisión 2021/914) y las adapta a otras jurisdicciones
+  (Schedule 2, punto 4). No menciona a Argentina ni la Ley 25.326. Aceptar los términos de servicio
+  equivale a firmarlo (cláusula 12.2): no hay un documento firmado aparte.
+
+Brasil, Singapur y Estados Unidos no están en la lista de países adecuados de la AAIP, y el DPA no es el
+modelo de la AAIP (Disposición 60/2016, Resolución 198/2023). Un contrato distinto del modelo **se presenta
+a la AAIP dentro de los 30 días corridos desde la firma**: mail a datospersonales@aaip.gob.ar con copia
+del contrato y los puntos en que difiere del modelo (ver
+<https://www.argentina.gob.ar/transferencias-internacionales>). Para que el DPA cubra RES-06:
+
+1. Al crear el proyecto en Supabase (paso 1), anotá la fecha en que aceptaste los términos.
+2. Bajá el DPA vigente en PDF y mandalo a la AAIP antes de que pasen 30 días.
+3. Guardá el mail enviado y la respuesta de la AAIP junto con esta guía: es la evidencia que pide RNF-025.
+
+Si la AAIP lo rechaza, las alternativas son agregar al consentimiento que firman los padres (DEP-06) el
+consentimiento expreso para la transferencia, o mover la base a PostgreSQL en el servidor de DonWeb.
 
 ## Problemas comunes
 
