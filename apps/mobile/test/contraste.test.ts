@@ -26,7 +26,7 @@ describe('RNF-029 contraste', () => {
     for (const f of fondos) expect(contraste(color, f)).toBeGreaterThanOrEqual(4.5);
   });
   it('texto blanco sobre botones y franjas ≥ 4,5:1', () => {
-    for (const f of [colores.primario, colores.peligro, colores.aviso]) expect(contraste(colores.primarioTexto, f)).toBeGreaterThanOrEqual(4.5);
+    for (const f of [colores.primario, colores.peligro, colores.aviso, colores.primarioEncima, colores.peligroEncima]) expect(contraste(colores.primarioTexto, f)).toBeGreaterThanOrEqual(4.5);
   });
   it('texto sobre los avisos de color ≥ 4,5:1', () => {
     for (const f of [colores.primarioSuave, colores.peligroSuave, colores.avisoSuave, colores.infoSuave]) {

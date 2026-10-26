@@ -15,6 +15,7 @@ import { useFicha } from '../../../lib/fichas';
 import { useSesion } from '../../../lib/sesion';
 import { elegirArchivo, sacarFoto, subir, type ArchivoElegido } from '../../../lib/subidas';
 import { Aviso, Boton, Campo, Cargando, confirmar, Dato, Pantalla, Selector, Tarjeta } from '../../../ui/componentes';
+import { useEscritorio } from '../../../ui/escritorio';
 
 /** RF-040 a RF-042: estado, fecha de entrega y archivo de un documento. */
 export default function Documento() {
@@ -26,6 +27,8 @@ export default function Documento() {
   const [fecha, setFecha] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  // En la compu "sacar foto" solo abre el selector de archivos: alcanza con el botón de adjuntar.
+  const conCamara = !useEscritorio();
   if (!ficha || !doc || !contexto) return <Cargando />;
   const def = DEF_DOCUMENTO[doc.tipo];
   const puedeEditar = tienePermiso(contexto.permisos, 'documentos', 'editar') && !sinConexion && (ficha.estado === 'activa' || ficha.estado === 'incompleta');
@@ -108,7 +111,7 @@ export default function Documento() {
         {puedeEditar ? (
           <>
             <Boton titulo="Adjuntar PDF o imagen" onPress={() => adjuntar('archivo')} cargando={ocupado === 'archivo'} />
-            <Boton titulo="Sacar foto del documento" variante="secundario" onPress={() => adjuntar('camara')} cargando={ocupado === 'camara'} />
+            {conCamara ? <Boton titulo="Sacar foto del documento" variante="secundario" onPress={() => adjuntar('camara')} cargando={ocupado === 'camara'} /> : null}
             {doc.archivo ? (
               <Boton
                 titulo="Quitar archivo"

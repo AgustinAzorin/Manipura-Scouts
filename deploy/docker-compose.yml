@@ -1,4 +1,4 @@
-# Producción en un servidor propio: API + Caddy (HTTPS automático). La base está en Supabase.
+# Producción en un servidor propio: API + Caddy (HTTPS automático y la versión web). La base está en Supabase.
 # Uso, desde esta carpeta: docker compose up -d --build   (ver docs/desplegar.md)
 name: scouttracker
 
@@ -16,6 +16,8 @@ services:
       NODE_ENV: production
       PORT: '3000'
       DIR_ALMACENAMIENTO: /datos/archivos
+      # La versión web está en otro dominio: el navegador necesita permiso (CORS) para llamar a la API.
+      ORIGENES_CORS: https://${DOMINIO_WEB:?Falta DOMINIO_WEB en deploy/.env}
       # Vacío en .env (DATABASE_SSL_CA_CONTENEDOR=) para no verificar; ver la guía.
       DATABASE_SSL_CA: ${DATABASE_SSL_CA_CONTENEDOR-/datos/supabase.crt}
     volumes:
@@ -24,12 +26,18 @@ services:
     logging: *logs
 
   caddy:
-    image: caddy:2
+    # Caddy con la versión web compilada adentro.
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+      args:
+        URL_API: https://${DOMINIO:?Falta DOMINIO en deploy/.env}
     restart: unless-stopped
     depends_on: [servidor]
     ports: ['80:80', '443:443', '443:443/udp']
     environment:
       DOMINIO: ${DOMINIO:?Falta DOMINIO en deploy/.env}
+      DOMINIO_WEB: ${DOMINIO_WEB:?Falta DOMINIO_WEB en deploy/.env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_datos:/data

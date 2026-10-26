@@ -3,8 +3,8 @@
 Cómo queda armado:
 
 ```
-Celulares ──HTTPS──▶ Cloud Server de DonWeb (Rosario)          Supabase (São Paulo)
-                     ├─ Caddy: HTTPS con certificado automático
+Celulares  ──HTTPS──▶ Cloud Server de DonWeb (Rosario)          Supabase (São Paulo)
+Navegadores           ├─ Caddy: HTTPS con certificado automático y la versión web
                      ├─ Servidor de ScoutTracker ──SSL──────▶  PostgreSQL (fichas, usuarios…)
                      ├─ Documentos y fotos (disco del servidor)
                      └─ Backup diario cifrado ──▶ Google Drive (u otro destino de rclone)
@@ -42,9 +42,11 @@ En la zona DNS del dominio creá un registro:
 | Tipo | Nombre | Valor |
 |---|---|---|
 | A | `api` | la IP pública del Cloud Server |
+| A | `app` | la misma IP |
 
-La dirección del servidor va a ser `https://api.TUDOMINIO.com.ar`. Desde tu compu, `nslookup api.TUDOMINIO.com.ar`
-tiene que devolver la IP del servidor (puede tardar hasta una hora en propagarse).
+La dirección del servidor va a ser `https://api.TUDOMINIO.com.ar` y la versión web `https://app.TUDOMINIO.com.ar`.
+Desde tu compu, `nslookup api.TUDOMINIO.com.ar` y `nslookup app.TUDOMINIO.com.ar` tienen que devolver la IP del
+servidor (puede tardar hasta una hora en propagarse).
 
 ## 3. Preparar el Cloud Server
 
@@ -78,7 +80,7 @@ openssl rand -hex 32     # copiá el resultado: es el SECRETO_ENLACES
 nano .env
 ```
 
-Completá en `.env`: `DOMINIO`, `URL_PUBLICA` (con `https://`), `DATABASE_URL` (paso 1.3), `SECRETO_ENLACES`
+Completá en `.env`: `DOMINIO`, `DOMINIO_WEB`, `URL_PUBLICA` (con `https://`), `DATABASE_URL` (paso 1.3), `SECRETO_ENLACES`
 y `MAIL_RESPONSABLE_TECNICO` (tu mail). `RESEND_API_KEY` puede quedar vacío por ahora. Guardá con Ctrl+O, Enter, Ctrl+X.
 
 Subí el certificado de Supabase **desde tu compu** (otra ventana de PowerShell, en la carpeta donde se bajó):
@@ -98,7 +100,8 @@ docker compose logs -f servidor     # Ctrl+C para salir
 ```
 
 Cuando el log muestra `Server listening`, abrí `https://api.TUDOMINIO.com.ar/salud` en el navegador:
-tiene que decir `{"ok":true}` con candado.
+tiene que decir `{"ok":true}` con candado. La primera vez Caddy también compila la versión web (unos minutos
+más): `https://app.TUDOMINIO.com.ar` tiene que mostrar la pantalla de inicio de sesión.
 
 **Si el log muestra un error de certificado** (`self-signed certificate`, `unable to verify` o `Hostname/IP does not match`):
 la conexión con Supabase se puede cifrar sin verificar el certificado. En `.env` agregá estas dos líneas y volvé a levantar
@@ -201,6 +204,19 @@ Cada tanto mirá `tail /var/log/scouttracker-backup.log`: cada día tiene que de
 # Si el backup está solo en Drive, primero: rclone copy gdrive:scouttracker-backups/ARCHIVO /var/backups/scouttracker/
 ```
 
+## La versión web
+
+Está en `https://app.TUDOMINIO.com.ar` y se entra con el mismo usuario que en el celular. Se compila al
+levantar Caddy (`deploy/web.Dockerfile`) con la dirección de la API de `DOMINIO`, así que no hay nada que
+configurar aparte. Para que los educadores la encuentren, mandales el enlace.
+
+En la web los datos de los protagonistas no quedan guardados en la compu: se borran al cerrar la pestaña,
+y tras 5 minutos sin uso se pide la contraseña. No funciona sin conexión ni recibe notificaciones push; los
+avisos llegan por mail.
+
+**Si ya tenías el servidor andando** antes de que existiera la versión web: agregá el registro DNS `app`
+(paso 2) y `DOMINIO_WEB=app.TUDOMINIO.com.ar` en `deploy/.env`, y actualizá como se explica abajo.
+
 ## Actualizar a una versión nueva
 
 Antes, sacá un snapshot del Cloud Server desde el panel de DonWeb.
@@ -218,6 +234,7 @@ Las migraciones de la base se aplican solas al arrancar.
 | Síntoma | Qué mirar |
 |---|---|
 | La app dice que no hay conexión | `docker compose ps` (¿está `healthy`?) y `docker compose logs --tail 100 servidor`. |
+| La web dice que no hay conexión con el servidor | `DOMINIO_WEB` en `.env` tiene que ser exactamente el dominio con el que se abre la web (sin `https://`): la API solo acepta pedidos del navegador desde ese origen. Después de cambiarlo, `docker compose up -d`. |
 | `/salud` no abre o sin candado | El DNS (`nslookup`), el firewall (`ufw status`) y `docker compose logs caddy`. Caddy necesita los puertos 80 y 443 libres. |
 | Errores de conexión a la base | Proyecto pausado en Supabase, contraseña mal escrita en `DATABASE_URL`, o el certificado (paso 5). |
 | Disco lleno | `df -h`, `du -sh /srv/scouttracker-datos/archivos /var/backups/scouttracker`, `docker system df`. |

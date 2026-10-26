@@ -23,7 +23,7 @@ export interface Config {
   mailRemitente: string;
   /** RNF-034: a quién se avisan los errores nuevos. */
   mailResponsableTecnico: string | null;
-  /** Orígenes permitidos por CORS (solo para la versión web de desarrollo). */
+  /** Orígenes permitidos por CORS: los de la versión web (en producción, https://DOMINIO_WEB). */
   origenesCors: string[];
 }
 

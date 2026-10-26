@@ -1,6 +1,6 @@
 # ScoutTracker
 
-App móvil (Android e iOS) para el padrón, las actividades y la documentación de ramas scout.
+App móvil (Android e iOS) y versión web para el padrón, las actividades y la documentación de ramas scout.
 Este repositorio implementa la **Parte 1 — Base** del SRS v1.4 (grupos, ramas, equipos, usuarios,
 roles, padrón, importación y consulta sin conexión), la **Parte 2 — Actividades** (RF-057 a
 RF-087): actividades, asistencia y autorizaciones con registro sin conexión, calendario y avisos
@@ -14,7 +14,7 @@ RF-116): gráficos, pantalla de inicio con pendientes y exportación de la nómi
 |---|---|
 | `packages/shared` | Reglas de negocio compartidas: edad (RN-01), TADA (RN-02), DNI y teléfonos (RN-03, RD-009), fechas (RN-04), cuotas (RN-05), documentos (RN-06), permisos por rol y alcance (RF-017 a RF-020), definición de la ficha (RD-002), lógica de la nómina (RF-029 a RF-034), reglas de la Ficha de Actividad (RN-09, RN-10), gráficos y pendientes del inicio (RF-106 a RF-114) y tipos de la API. |
 | `apps/server` | API HTTP (Fastify + PostgreSQL con Kysely). Migraciones SQL en `migrations/`. |
-| `apps/mobile` | App Expo SDK 58 (React Native, Expo Router). |
+| `apps/mobile` | App Expo SDK 58 (React Native, Expo Router). La misma app se exporta como sitio web (react-native-web). |
 
 ## Stack y decisiones
 
@@ -33,6 +33,13 @@ RF-116): gráficos, pantalla de inicio con pendientes y exportación de la nómi
   Native (sin librería de gráficos ni módulos nativos nuevos), con nombre y valor escritos en cada una.
 - **Excel:** el servidor arma el XLSX con exceljs (la misma librería de la importación) usando las mismas
   reglas de la nómina que la app (`shared/nomina.ts`), y la app lo entrega al menú de compartir.
+- **Versión web:** es la misma app exportada con `expo export --platform web`, así las pantallas, los
+  permisos y las reglas no se duplican. En pantallas de 900 px o más el menú pasa a una barra lateral
+  fija, el contenido se centra y las listas de opciones abren como diálogo. Lo que cambia por la
+  plataforma (archivos `*.web.ts`): la sesión y la nómina van en `sessionStorage` y se borran al cerrar
+  la pestaña (la compu puede ser compartida); el bloqueo de RNF-016 pide la contraseña tras 5 minutos
+  sin uso, sin desmontar la pantalla; el PDF y el Excel se descargan; no hay notificaciones push (los
+  avisos siguen llegando por mail). Se sirve con Caddy en su propio dominio y la API la habilita por CORS.
 - **Mails:** Resend por HTTP (SUP-06) con el tope diario de RN-14. Los enlaces de invitación y recuperación abren una página web del servidor, que funciona en cualquier celular aunque el cliente de mail no abra la app.
 
 ## Desarrollo local
@@ -64,8 +71,9 @@ Docker, carga datos ficticios (`npm run demo`) y explica cómo conectar el celul
 Atajos desde la raíz: `npm run db` (PostgreSQL con Docker), `npm run demo`, `npm run servidor`,
 `npm run app` y `npm run android`. El servidor lee `apps/server/.env` si existe.
 
-Para probar rápido en la compu, `npx expo start --web` funciona sin biometría y con el servidor
-arrancado con `ORIGENES_CORS=http://localhost:8081`.
+**Versión web:** con el servidor arrancado con `ORIGENES_CORS=http://localhost:8081`, `npm run web -w mobile`
+la abre en http://localhost:8081. Achicá la ventana por debajo de 900 px para ver la disposición de celular.
+Para revisar la compilación de producción: `npx expo export --platform web` en `apps/mobile` (deja el sitio en `dist/`).
 
 Variables del servidor: ver `apps/server/.env.example`.
 

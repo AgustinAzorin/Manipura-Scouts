@@ -3,21 +3,11 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { AppState, Platform, View } from 'react-native';
 import { Aviso, Boton, Parrafo, Titulo } from '../ui/componentes';
 import { colores, espacio } from '../ui/tema';
+import { consumirLoginReciente } from './loginReciente';
 
 /** RNF-016: se pide el desbloqueo del dispositivo al abrir y tras 5 minutos sin uso. */
 export const MINUTOS_SIN_USO = 5;
 const LIMITE_MS = MINUTOS_SIN_USO * 60 * 1000;
-
-/** Recién se ingresó la contraseña: no hace falta pedir también la huella. */
-let loginReciente = false;
-export function marcarLoginReciente() {
-  loginReciente = true;
-}
-function consumirLoginReciente() {
-  const v = loginReciente;
-  loginReciente = false;
-  return v;
-}
 
 type ResultadoDesbloqueo = 'ok' | 'sinBloqueo' | 'cancelado' | 'error';
 

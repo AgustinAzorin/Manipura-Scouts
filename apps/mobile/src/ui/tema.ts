@@ -12,8 +12,11 @@ export const colores = {
   primario: '#1F4D2B',
   primarioTexto: '#FFFFFF',
   primarioSuave: '#E3EEE5',
+  /** Botones con el mouse encima (versión web). */
+  primarioEncima: '#173B21',
   peligro: '#A11D1D',
   peligroSuave: '#FDE8E8',
+  peligroEncima: '#861818',
   aviso: '#7A4B00',
   avisoSuave: '#FFF3D6',
   info: '#0B4F8A',

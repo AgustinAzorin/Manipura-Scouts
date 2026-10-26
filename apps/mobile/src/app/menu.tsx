@@ -1,19 +1,18 @@
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
-import { formatearFechaHora, tienePermiso } from '@scouttracker/shared';
+import { formatearFechaHora } from '@scouttracker/shared';
 import { useDatos } from '../lib/datos';
-import { useAnexosPendientes } from '../lib/fichaActividad';
 import { useSesion } from '../lib/sesion';
-import { Aviso, Boton, confirmar, ItemMenu, Pantalla, Parrafo, Subtitulo } from '../ui/componentes';
+import { Aviso, Boton, ItemMenu, Pantalla, Parrafo, Subtitulo } from '../ui/componentes';
+import { useCerrarSesion, useSeccionesNavegacion } from '../ui/navegacion';
 
 export default function Menu() {
-  const { yo, contexto, cerrarSesion } = useSesion();
+  const { yo, contexto } = useSesion();
   const { snapshot, sinConexion, recargar, cargando, pendientes } = useDatos();
   const router = useRouter();
-  const { anexos } = useAnexosPendientes();
+  const secciones = useSeccionesNavegacion();
+  const salir = useCerrarSesion();
   if (!yo) return null;
-  const incompletas = snapshot?.fichas.filter((f) => f.estado === 'incompleta').length ?? 0;
-  const administra = yo.usuario.esAdminPlataforma || yo.gruposAdministrables.length > 0 || yo.ramasAdministrables.length > 0;
   return (
     <Pantalla>
       <Parrafo>
@@ -35,56 +34,15 @@ export default function Menu() {
         </Aviso>
       ) : null}
       <Boton titulo="Sincronizar ahora" variante="secundario" onPress={recargar} cargando={cargando} />
-      <View>
-        <Subtitulo>Padrón</Subtitulo>
-        <ItemMenu titulo="Inicio" detalle="Resumen de la rama y pendientes" onPress={() => router.dismissTo('/inicio')} />
-        <ItemMenu titulo="Nómina" onPress={() => router.dismissTo('/nomina')} />
-        {contexto && tienePermiso(contexto.permisos, 'graficos', 'ver') ? (
-          <ItemMenu titulo="Gráficos" detalle="Edades, promesas, TADA, equipos y más (funciona sin conexión)" onPress={() => router.push('/graficos')} />
-        ) : null}
-        <ItemMenu titulo="Fichas a completar" detalle={incompletas ? `${incompletas} incompletas` : 'Ninguna'} onPress={() => router.push('/incompletas')} />
-        <ItemMenu titulo="Ex integrantes" detalle="Fichas archivadas (requiere conexión)" onPress={() => router.push('/ex-integrantes')} />
-        {yo.contextos.length > 1 ? <ItemMenu titulo="Cambiar de rama o grupo" onPress={() => router.push('/contexto')} /> : null}
-      </View>
-      {contexto && (tienePermiso(contexto.permisos, 'actividades', 'ver') || tienePermiso(contexto.permisos, 'calendario', 'ver')) ? (
-        <View>
-          <Subtitulo>Actividades</Subtitulo>
-          {tienePermiso(contexto.permisos, 'actividades', 'ver') ? (
-            <ItemMenu titulo="Actividades" detalle="Confirmaciones, asistencia y autorizaciones (funciona sin conexión)" onPress={() => router.push('/actividades')} />
-          ) : null}
-          {tienePermiso(contexto.permisos, 'calendario', 'ver') ? (
-            <ItemMenu titulo="Calendario" detalle="Actividades, cumpleaños, feriados y tus recordatorios" onPress={() => router.push('/calendario')} />
-          ) : null}
-          <ItemMenu
-            titulo="Mis anexos pendientes"
-            detalle={anexos.length ? `${anexos.length} para completar (requiere conexión)` : 'Ninguno (requiere conexión)'}
-            onPress={() => router.push('/anexos-pendientes')}
-          />
+      {secciones.map((s) => (
+        <View key={s.titulo}>
+          <Subtitulo>{s.titulo}</Subtitulo>
+          {s.items.map((i) => (
+            <ItemMenu key={i.ruta} titulo={i.titulo} detalle={i.detalle} onPress={() => (i.principal ? router.dismissTo(i.ruta) : router.push(i.ruta))} />
+          ))}
         </View>
-      ) : null}
-      <View>
-        <Subtitulo>Cuenta</Subtitulo>
-        <ItemMenu titulo="Avisos" detalle="Qué avisos recibís por notificación y por mail" onPress={() => router.push('/avisos')} />
-      </View>
-      {administra ? (
-        <View>
-          <Subtitulo>Administración</Subtitulo>
-          <ItemMenu titulo="Administración" detalle="Grupos, usuarios, roles, ramas, equipos, catálogos e importación" onPress={() => router.push('/admin')} />
-        </View>
-      ) : null}
-      <Boton
-        titulo="Cerrar sesión"
-        variante="peligro"
-        onPress={async () => {
-          const sinEnviar = pendientes.length
-            ? ` Hay ${pendientes.length === 1 ? '1 registro' : `${pendientes.length} registros`} de asistencia o autorización sin enviar: se pierden.`
-            : '';
-          if (await confirmar('Cerrar sesión', `Se borran del celular los datos guardados para usar sin conexión.${sinEnviar}`, 'Cerrar sesión')) {
-            await cerrarSesion();
-            router.replace('/login');
-          }
-        }}
-      />
+      ))}
+      <Boton titulo="Cerrar sesión" variante="peligro" onPress={() => void salir()} />
     </Pantalla>
   );
 }

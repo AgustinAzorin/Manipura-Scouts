@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Contexto, RespuestaLogin, RespuestaYo } from '@scouttracker/shared';
 import { crearAlmacen } from './almacen';
 import { api, configurarApi, ErrorDelServidor, SinConexion } from './api';
-import { marcarLoginReciente } from './bloqueo';
+import { marcarLoginReciente } from './loginReciente';
 import { cargarServidor } from './servidor';
 
 /** Datos guardados para uso sin conexión: se borran al cerrar sesión (RF-013). */
