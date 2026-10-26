@@ -1,0 +1,16 @@
+# Contexto de deploy/web.Dockerfile (reemplaza a /.dockerignore para esa imagen).
+**/node_modules
+**/dist
+.git
+.github
+.claude
+docs
+deploy
+apps/server/*
+!apps/server/package.json
+apps/mobile/android
+apps/mobile/ios
+apps/mobile/.expo
+**/.env
+**/.env.*
+**/almacenamiento

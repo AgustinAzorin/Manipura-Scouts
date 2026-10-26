@@ -15,6 +15,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ANCHO_ANGOSTO, ANCHO_LECTURA, conMouseEncima, useEscritorio } from './escritorio';
 import { colores, espacio, TACTIL_MINIMO, texto } from './tema';
 
 // Los textos no fijan alto de línea ni de contenedor para respetar el tamaño de letra del
@@ -40,11 +41,12 @@ export function Parrafo({ children, suave }: { children: ReactNode; suave?: bool
   return <Text style={[e.parrafo, suave && { color: colores.textoSuave }]}>{children}</Text>;
 }
 
-export function Pantalla({ children, desplazable = true }: { children: ReactNode; desplazable?: boolean }) {
+/** `angosta`: en la web ancha, el contenido queda en una columna angosta (inicio de sesión). */
+export function Pantalla({ children, desplazable = true, angosta }: { children: ReactNode; desplazable?: boolean; angosta?: boolean }) {
   return (
     <SafeAreaView style={e.pantalla} edges={['bottom', 'left', 'right']}>
       {desplazable ? (
-        <ScrollView contentContainerStyle={e.contenido} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[e.contenido, Platform.OS === 'web' && [e.contenidoWeb, angosta && { maxWidth: ANCHO_ANGOSTO }]]} keyboardShouldPersistTaps="handled">
           {children}
         </ScrollView>
       ) : (
@@ -81,7 +83,7 @@ export function Boton({
       accessibilityState={{ disabled: !!inactivo, busy: !!cargando }}
       disabled={inactivo}
       onPress={onPress}
-      style={({ pressed }) => [e.boton, e[`boton_${variante}`], inactivo && e.botonInactivo, pressed && { opacity: 0.8 }, estilo]}
+      style={(estado) => [e.boton, e[`boton_${variante}`], inactivo && e.botonInactivo, !inactivo && conMouseEncima(estado) && e[`botonEncima_${variante}`], estado.pressed && { opacity: 0.8 }, estilo]}
     >
       {cargando ? (
         <ActivityIndicator color={variante === 'primario' || variante === 'peligro' ? colores.primarioTexto : colores.primario} />
@@ -154,6 +156,8 @@ export function Selector({
   deshabilitado?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
+  // En la web ancha la lista se abre como diálogo centrado, no a pantalla completa.
+  const dialogo = useEscritorio();
   const seleccion = Array.isArray(valor) ? valor : valor ? [valor] : [];
   const resumen = seleccion.length
     ? opciones
@@ -188,8 +192,10 @@ export function Selector({
         </Text>
       </Pressable>
       {error ? <Text style={e.error}>{error}</Text> : null}
-      <Modal visible={abierto} animationType="slide" onRequestClose={() => setAbierto(false)}>
-        <SafeAreaView style={e.pantalla}>
+      <Modal visible={abierto} animationType={dialogo ? 'fade' : 'slide'} transparent={dialogo} onRequestClose={() => setAbierto(false)}>
+        <SafeAreaView style={dialogo ? e.fondoDialogo : e.pantalla}>
+          {dialogo ? <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Cerrar" onPress={() => setAbierto(false)} /> : null}
+          <View style={dialogo ? e.dialogo : { flex: 1 }} aria-modal={dialogo || undefined} role={dialogo ? 'dialog' : undefined} aria-label={etiqueta}>
           <View style={e.modalEncabezado}>
             <Subtitulo>{etiqueta}</Subtitulo>
           </View>
@@ -208,6 +214,7 @@ export function Selector({
             {multiple && seleccion.length ? <Boton titulo="Limpiar" variante="secundario" onPress={() => alCambiar([])} /> : null}
             <Boton titulo={multiple ? 'Listo' : 'Cerrar'} variante={multiple ? 'primario' : 'secundario'} onPress={() => setAbierto(false)} />
           </View>
+          </View>
         </SafeAreaView>
       </Modal>
     </View>
@@ -221,7 +228,7 @@ function OpcionFila({ etiqueta, detalle, elegida, multiple, alTocar }: { etiquet
       accessibilityState={{ checked: elegida }}
       accessibilityLabel={etiqueta}
       onPress={alTocar}
-      style={[e.opcion, elegida && { backgroundColor: colores.primarioSuave, borderColor: colores.primario }]}
+      style={(estado) => [e.opcion, conMouseEncima(estado) && { borderColor: colores.borde }, elegida && { backgroundColor: colores.primarioSuave, borderColor: colores.primario }]}
     >
       <Text style={e.opcionMarca}>{elegida ? (multiple ? '☑' : '●') : multiple ? '☐' : '○'}</Text>
       <View style={{ flex: 1 }}>
@@ -290,7 +297,7 @@ export function Dato({ etiqueta, valor, accion }: { etiqueta: string; valor: Rea
 
 export function ItemMenu({ titulo, detalle, onPress }: { titulo: string; detalle?: string; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={titulo} onPress={onPress} style={({ pressed }) => [e.itemMenu, pressed && { backgroundColor: colores.primarioSuave }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={titulo} onPress={onPress} style={(estado) => [e.itemMenu, conMouseEncima(estado) && { backgroundColor: colores.filaPar }, estado.pressed && { backgroundColor: colores.primarioSuave }]}>
       <View style={{ flex: 1 }}>
         <Text style={[e.parrafo, { fontWeight: '600' }]}>{titulo}</Text>
         {detalle ? <Text style={e.ayuda}>{detalle}</Text> : null}
@@ -334,6 +341,9 @@ export function avisar(titulo: string, mensaje: string): void {
 const e = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.fondo },
   contenido: { padding: espacio.l, gap: espacio.m, paddingBottom: espacio.xxl },
+  contenidoWeb: { width: '100%', maxWidth: ANCHO_LECTURA, alignSelf: 'center' },
+  fondoDialogo: { flex: 1, backgroundColor: 'rgba(27, 31, 26, 0.45)', alignItems: 'center', justifyContent: 'center', padding: espacio.xl },
+  dialogo: { width: '100%', maxWidth: ANCHO_ANGOSTO + 80, maxHeight: '85%', backgroundColor: colores.fondo, borderRadius: 12, overflow: 'hidden' },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: espacio.xl },
   titulo: { fontSize: texto.titulo, fontWeight: '700', color: colores.primario },
   subtitulo: { fontSize: texto.grande, fontWeight: '700', color: colores.texto, marginTop: espacio.s },
@@ -343,6 +353,10 @@ const e = StyleSheet.create({
   boton_secundario: { backgroundColor: colores.superficie, borderWidth: 2, borderColor: colores.primario },
   boton_peligro: { backgroundColor: colores.peligro },
   boton_texto: { backgroundColor: 'transparent' },
+  botonEncima_primario: { backgroundColor: colores.primarioEncima },
+  botonEncima_secundario: { backgroundColor: colores.primarioSuave },
+  botonEncima_peligro: { backgroundColor: colores.peligroEncima },
+  botonEncima_texto: { backgroundColor: colores.primarioSuave },
   botonInactivo: { opacity: 0.5 },
   botonTexto: { fontSize: texto.normal, fontWeight: '700', textAlign: 'center' },
   botonTexto_primario: { color: colores.primarioTexto },

@@ -3,6 +3,7 @@ import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 import { hayFiltros, hoyAR, type Direccion, type FiltrosNomina } from '@scouttracker/shared';
 import { ErrorDelServidor, SinConexion, tokenActual, urlApi } from './api';
+import { descargarEnNavegador } from './descargas';
 
 const MIME_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const TIEMPO_MAXIMO_MS = 60_000;
@@ -47,15 +48,7 @@ export async function exportarNomina(p: PedidoExportacion): Promise<void> {
   const bytes = await r.arrayBuffer();
   const nombre = `Nomina ${p.ramaNombre}${p.equipo ? ` ${p.equipo.nombre}` : ''} ${hoyAR()}.xlsx`.replace(/[\\/:*?"<>|]/g, ' ');
 
-  if (Platform.OS === 'web') {
-    const url = URL.createObjectURL(new Blob([bytes], { type: MIME_XLSX }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = nombre;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    return;
-  }
+  if (Platform.OS === 'web') return descargarEnNavegador(new Blob([bytes], { type: MIME_XLSX }), nombre);
   // El archivo queda en la caché de la app y se reemplaza en la próxima exportación.
   const dir = new Directory(Paths.cache, 'exportaciones');
   if (dir.exists) dir.delete();

@@ -5,8 +5,9 @@ import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import type { AnexoPendienteDTO, FichaActividadDTO } from '@scouttracker/shared';
-import { api, mensajeDeError } from './api';
+import { api, mensajeDeError, SinConexion } from './api';
 import { useDatos } from './datos';
+import { descargarEnNavegador } from './descargas';
 import { useSesion } from './sesion';
 
 /**
@@ -43,11 +44,21 @@ export async function verPdf(fichaId: string): Promise<void> {
 
 /**
  * RF-104 / RI-009: descarga el PDF guardado a la caché del celular y abre el menú de compartir del
- * sistema con el archivo. En la versión web de desarrollo lo abre en otra pestaña.
+ * sistema con el archivo. En la versión web lo guarda en las descargas del navegador.
  */
 export async function compartirPdf(fichaId: string, nombreArchivo: string): Promise<void> {
   const { url } = await enlacePdf(fichaId);
-  if (Platform.OS === 'web' || !(await Sharing.isAvailableAsync())) {
+  if (Platform.OS === 'web') {
+    let r: Response;
+    try {
+      r = await fetch(url);
+    } catch {
+      throw new SinConexion();
+    }
+    if (!r.ok) throw new Error('No se pudo descargar el PDF. Probá de nuevo.');
+    return descargarEnNavegador(await r.blob(), nombreArchivo);
+  }
+  if (!(await Sharing.isAvailableAsync())) {
     await WebBrowser.openBrowserAsync(url);
     return;
   }

@@ -8,6 +8,7 @@ import { useDatos } from '../../../lib/datos';
 import { useSesion } from '../../../lib/sesion';
 import { elegirArchivo, sacarFoto, subir, type ArchivoElegido } from '../../../lib/subidas';
 import { Aviso, Boton, Campo, Cargando, confirmar, Dato, Pantalla, Tarjeta } from '../../../ui/componentes';
+import { useEscritorio } from '../../../ui/escritorio';
 
 /**
  * RF-059: estado, fecha y archivo de la autorización de un inscripto. El estado y la fecha se
@@ -21,6 +22,8 @@ export default function AutorizacionActividad() {
   const [fecha, setFecha] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  // En la compu "sacar foto" solo abre el selector de archivos: alcanza con el botón de adjuntar.
+  const conCamara = !useEscritorio();
   const i = actividad?.inscripciones.find((x) => x.fichaId === ficha);
   if (!actividad || !i?.autorizacion || !contexto) return <Cargando />;
   const a = i.autorizacion;
@@ -94,7 +97,7 @@ export default function AutorizacionActividad() {
         {puedeEditar ? (
           <>
             <Boton titulo="Adjuntar PDF o imagen" onPress={() => void adjuntar('archivo')} cargando={ocupado === 'archivo'} deshabilitado={sinConexion} />
-            <Boton titulo="Sacar foto de la autorización" variante="secundario" onPress={() => void adjuntar('camara')} cargando={ocupado === 'camara'} deshabilitado={sinConexion} />
+            {conCamara ? <Boton titulo="Sacar foto de la autorización" variante="secundario" onPress={() => void adjuntar('camara')} cargando={ocupado === 'camara'} deshabilitado={sinConexion} /> : null}
             {a.archivo ? (
               <Boton
                 titulo="Quitar archivo"

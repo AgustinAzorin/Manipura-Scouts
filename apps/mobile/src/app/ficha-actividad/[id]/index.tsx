@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import {
   faltantesVersionFinal,
   fechaFicha,
@@ -112,7 +112,7 @@ export default function VistaFichaActividad() {
         {ficha.pdf && ficha.pdfDesactualizado ? <Aviso tipo="aviso">Hubo cambios después de generar este PDF. Volvé a generarlo para incluirlos.</Aviso> : null}
         {ficha.pdf ? (
           <>
-            <Boton titulo="Compartir PDF" onPress={() => void ejecutar('compartir', () => compartirPdf(ficha.id, nombreArchivo))} cargando={ocupado === 'compartir'} deshabilitado={sinConexion} />
+            <Boton titulo={Platform.OS === 'web' ? 'Descargar PDF' : 'Compartir PDF'} onPress={() => void ejecutar('compartir', () => compartirPdf(ficha.id, nombreArchivo))} cargando={ocupado === 'compartir'} deshabilitado={sinConexion} />
             <Boton titulo="Ver PDF" variante="secundario" onPress={() => void ejecutar('ver', () => verPdf(ficha.id))} cargando={ocupado === 'ver'} deshabilitado={sinConexion} />
           </>
         ) : null}

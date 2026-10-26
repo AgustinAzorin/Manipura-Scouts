@@ -1,4 +1,6 @@
-# Caddy saca y renueva solo el certificado HTTPS del dominio (Let's Encrypt).
+# Caddy saca y renueva solo el certificado HTTPS de cada dominio (Let's Encrypt).
+
+# API: la usan la app del celular y la versión web.
 {$DOMINIO} {
 	encode zstd gzip
 	reverse_proxy servidor:3000
@@ -6,4 +8,26 @@
 		Strict-Transport-Security "max-age=31536000"
 		-Server
 	}
+}
+
+# Versión web: la app exportada como sitio estático (deploy/web.Dockerfile).
+{$DOMINIO_WEB} {
+	encode zstd gzip
+	root * /srv/web
+	# Las rutas de la app (/nomina, /ficha/…) se resuelven en el navegador: todas devuelven index.html.
+	try_files {path} /index.html
+	file_server
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		# Solo habla con la API; los estilos inline los genera react-native-web.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://{$DOMINIO}; connect-src 'self' https://{$DOMINIO}; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		-Server
+	}
+	# Los archivos de la compilación llevan un hash en el nombre: se guardan un año. index.html, nunca.
+	@compilados path /_expo/static/*
+	header @compilados Cache-Control "public, max-age=31536000, immutable"
+	@paginas not path /_expo/static/* /assets/*
+	header @paginas Cache-Control "no-cache"
 }

@@ -10,7 +10,7 @@ export default function ElegirContexto() {
   if (!yo) return null;
   const grupos = [...new Set(yo.contextos.map((c) => c.grupoNombre))];
   return (
-    <Pantalla>
+    <Pantalla angosta>
       <Parrafo>La nómina y la información que ves dependen de la rama que elijas.</Parrafo>
       {grupos.map((g) => (
         <View key={g}>

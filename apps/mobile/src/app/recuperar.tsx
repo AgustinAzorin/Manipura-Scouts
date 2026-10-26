@@ -21,7 +21,7 @@ export default function Recuperar() {
     }
   };
   return (
-    <Pantalla>
+    <Pantalla angosta>
       <Parrafo>Escribí tu mail y te enviamos un enlace para definir una contraseña nueva. El enlace vence en 1 hora.</Parrafo>
       {mensaje ? <Aviso tipo="exito">{mensaje}</Aviso> : null}
       {error ? <Aviso tipo="error">{error}</Aviso> : null}

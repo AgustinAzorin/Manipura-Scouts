@@ -29,7 +29,7 @@ export default function Login() {
   };
 
   return (
-    <Pantalla>
+    <Pantalla angosta>
       <Titulo>ScoutTracker</Titulo>
       <Parrafo suave>Padrón y actividades de la rama</Parrafo>
       {estado.tipo === 'sinSesion' && estado.motivo ? <Aviso tipo="aviso">{estado.motivo}</Aviso> : null}
